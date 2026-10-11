@@ -18,7 +18,6 @@ router = APIRouter()
 
 
 # 公共函数：显示初始化页面。
-# 第一次打开页面、提交出错时，都可以调用它。
 def render_setup(
     request: Request,
     error: str = "",          # 错误提示，默认没有错误
@@ -39,7 +38,7 @@ def render_setup(
     )
 
 
-# GET /setup：用户打开初始化页面时执行。
+# 初始化页面
 @router.get("/setup", response_class=HTMLResponse)
 def setup_page(request: Request):
     # 已经创建过管理员，就不允许再次初始化。
@@ -49,7 +48,7 @@ def setup_page(request: Request):
     return render_setup(request)
 
 
-# POST /setup：用户点击“创建管理员”提交表单时执行。
+# 创建管理员
 @router.post("/setup", response_class=HTMLResponse)
 def setup_submit(
     request: Request,
@@ -78,15 +77,11 @@ def setup_submit(
 
     error = ""
 
-    # fullmatch 要求整个账号都符合规则：
-    # A-Z、a-z：英文字母
-    # 0-9：数字
-    # _：下划线
-    # {3,32}：长度为 3～32 位
+    # 账号规则：
     if not re.fullmatch(r"[A-Za-z0-9_]{3,32}", username):
         error = "账号需为 3～32 位字母、数字或下划线。"
 
-    # 密码只要求至少 8 位。
+    # 密码规则：
     elif len(password) < 8:
         error = "密码至少需要 8 位。"
 
@@ -94,14 +89,13 @@ def setup_submit(
     elif password != confirm_password:
         error = "两次输入的密码不一致。"
 
-    # 有错误就重新显示初始化页面，并展示错误原因。
-    # 只回填账号，不把密码传回页面。
+    # 错误就重新显示初始化页面。
     if error:
         return render_setup(
             request,
             error=error,
             username=username,
-            status_code=400,  # 400 表示提交的数据有问题
+            status_code=400,
         )
 
     try:
