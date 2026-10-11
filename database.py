@@ -18,7 +18,7 @@ def get_db():
     finally:
         connection.close()
 
-
+# 初始化数据库
 def init_db():
     DATABASE_PATH.parent.mkdir(parents=True, exist_ok=True)
 
@@ -33,6 +33,7 @@ def init_db():
         """)
 
 
+# 检查是否有管理员
 def has_admin() -> bool:
     with get_db() as db:
         admin = db.execute(
@@ -41,7 +42,7 @@ def has_admin() -> bool:
 
     return admin is not None
 
-
+# 创建管理员
 def create_admin(username: str, password_hash: str):
     with get_db() as db:
         db.execute(
