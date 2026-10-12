@@ -1,0 +1,129 @@
+/* 事件日志：正文 14px，辅助文字 12px。 */
+.events-panel {
+    padding: 24px;
+}
+
+.events-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+}
+
+.events-controls,
+.events-size,
+.events-pages {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.events-size select {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 8px 12px;
+    background: #fff;
+    color: var(--ink);
+    font: inherit;
+}
+
+/* 表格横向溢出时仅表格区域滚动。 */
+.events-table-wrap {
+    margin-top: 24px;
+    overflow-x: auto;
+}
+
+.events-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.events-table th,
+.events-table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+}
+
+.events-table th {
+    background: #f8f9fb;
+    color: #727984;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.events-time {
+    white-space: nowrap;
+}
+
+.events-result {
+    min-width: 220px;
+    overflow-wrap: anywhere;
+}
+
+.events-table .events-empty {
+    padding: 64px 16px;
+    color: var(--muted);
+    text-align: center;
+}
+
+.events-pagination {
+    margin-top: 24px;
+}
+
+.events-pagination p {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.events-pages button:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+/* 消息内容保留换行，长文本在列内折行。 */
+.events-content {
+    min-width: 240px;
+    max-width: 400px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+/* 标题操作保持文字高度，不撑高标题栏。 */
+.events-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.events-clear {
+    padding: 0;
+    color: #b94b4b;
+}
+
+/* 清空操作使用页面内确认框。 */
+.events-dialog {
+    width: 420px;
+    padding: 24px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    color: var(--ink);
+    background: #fff;
+}
+
+.events-dialog::backdrop {
+    background: rgb(0 0 0 / 30%);
+}
+
+.events-dialog p {
+    margin-top: 12px;
+    color: #727984;
+}
+
+.events-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 24px;
+}

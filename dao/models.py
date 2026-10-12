@@ -1,4 +1,8 @@
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 from tortoise import Model, fields
+from tortoise.timezone import get_use_tz
 
 
 # 管理员表
@@ -54,3 +58,52 @@ class WelcomeSettings(Model):
 
     class Meta:
         table = "welcome_settings"
+
+
+class KeywordSettings(Model):
+    id = fields.IntField(pk=True)
+    enabled = fields.BooleanField(default=False)
+    keywords = fields.JSONField(default=list)
+
+    class Meta:
+        table = "keyword_settings"
+
+
+class AISettings(Model):
+    id = fields.IntField(pk=True)
+    enabled = fields.BooleanField(default=False)
+    base_url = fields.CharField(max_length=2048, default="")
+    model = fields.CharField(max_length=128, default="")
+    api_key = fields.TextField(default="")
+
+    class Meta:
+        table = "ai_settings"
+
+
+# 白名单先于关键词和 AI 判断，关闭拦截时仍保留配置。
+class WhitelistSettings(Model):
+    id = fields.IntField(pk=True)
+    entries = fields.JSONField(default=list)
+
+    class Meta:
+        table = "whitelist_settings"
+
+
+def event_time_now():
+    # 现有数据库使用无时区时间；日志统一保存北京时间，避免依赖服务器时区。
+    value = datetime.now(ZoneInfo("Asia/Shanghai"))
+    return value if get_use_tz() else value.replace(tzinfo=None)
+
+
+# 保存事件内容与处理结果，配置密钥不写入日志。
+class EventLog(Model):
+    id = fields.IntField(pk=True)
+    created_at = fields.DatetimeField(default=event_time_now)
+    event_type = fields.CharField(max_length=32)
+    nickname = fields.CharField(max_length=128, default="")
+    username = fields.CharField(max_length=64, default="")
+    content = fields.TextField(default="", description="事件消息内容")
+    result = fields.CharField(max_length=500)
+
+    class Meta:
+        table = "event_logs"

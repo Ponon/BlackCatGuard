@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{{ page_title }}</title>
+        <link rel="icon" type="image/svg+xml" href="{{ url_for('static', path='/images/logo.svg') }}">
+        <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}?v=7">
+        <link rel="stylesheet" href="{{ url_for('static', path='/css/events.css') }}">
+        <link rel="stylesheet" href="{{ url_for('static', path='/css/toast.css') }}">
+        <script src="{{ url_for('static', path='/js/toast.js') }}" defer></script>
+        <script src="{{ url_for('static', path='/js/events.js') }}" defer></script>
+    </head>
+    <body>
+        {% include 'partials/header.html' %}
+        {% if success %}
+        <div class="error_toast success_toast" role="status">{{ success }}</div>
+        {% endif %}
+        <section class="page-heading">
+            <div>
+                <div class="title-line">
+                    <h1>事件日志</h1>
+                    <span class="badge">EVENTS</span>
+                </div>
+                <p>查看处理记录与消息测试结果，时间为北京时间。</p>
+            </div>
+            <a class="button" href="/">返回工作台</a>
+        </section>
+        <main class="dashboard">
+            <section class="panel events-panel">
+                <div class="events-heading">
+                    <h2>事件记录</h2>
+                    <button class="text-button events-clear" id="clear-events" type="button">清空所有日志</button>
+                </div>
+                <div class="events-table-wrap">
+                    <table class="events-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">时间</th>
+                                <th scope="col">类型</th>
+                                <th scope="col">用户昵称</th>
+                                <th scope="col">用户名</th>
+                                <th scope="col">内容</th>
+                                <th scope="col">结果</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in rows %}
+                            <tr>
+                                <td class="events-time">{{ row.time }}</td>
+                                <td>{{ row.type }}</td>
+                                <td>{{ row.nickname or '—' }}</td>
+                                <td>{{ row.username or '—' }}</td>
+                                <td class="events-content">{{ row.content or '—' }}</td>
+                                <td class="events-result">{{ row.result }}</td>
+                            </tr>
+                            {% else %}
+                            <tr><td class="events-empty" colspan="6">暂无事件记录</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="events-pagination">
+                    <p>共 {{ total }} 条 · 第 {{ page }} / {{ pages }} 页</p>
+                    <div class="events-controls">
+                        <form class="events-size" action="/events" method="get">
+                            <label for="page-size">每页条数</label>
+                            <select id="page-size" name="page_size">
+                                {% for size in page_sizes %}
+                                <option value="{{ size }}" {% if page_size == size %}selected{% endif %}>{{ size }} 条</option>
+                                {% endfor %}
+                            </select>
+                            <button class="button" type="submit">应用</button>
+                        </form>
+                        <nav class="events-pages" aria-label="日志分页">
+                            {% if page > 1 %}
+                            <a class="button" href="/events?page={{ page - 1 }}&amp;page_size={{ page_size }}">上一页</a>
+                            {% else %}
+                            <button class="button" disabled>上一页</button>
+                            {% endif %}
+                            {% if page < pages %}
+                            <a class="button" href="/events?page={{ page + 1 }}&amp;page_size={{ page_size }}">下一页</a>
+                            {% else %}
+                            <button class="button" disabled>下一页</button>
+                            {% endif %}
+                        </nav>
+                    </div>
+                </div>
+            </section>
+            {% include 'partials/footer.html' %}
+        </main>
+        <dialog class="events-dialog" id="clear-events-dialog" aria-labelledby="clear-events-title" aria-describedby="clear-events-description">
+            <h2 id="clear-events-title">清空所有日志？</h2>
+            <p id="clear-events-description">确认后将删除数据库中的全部日志，此操作无法撤销。</p>
+            <form id="clear-events-form" action="/events/clear" method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="confirmed" value="true">
+                <div class="events-dialog-actions">
+                    <button class="button" id="cancel-clear-events" type="button" autofocus>取消</button>
+                    <button class="button button--primary" type="submit">确认清空</button>
+                </div>
+            </form>
+        </dialog>
+    </body>
+</html>

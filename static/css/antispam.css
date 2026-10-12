@@ -1,0 +1,168 @@
+/* 广告拦截独立样式：正文 14px，辅助说明 12px。 */
+.spam-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    align-items: start;
+    gap: 20px;
+}
+
+.spam-card {
+    padding: 24px;
+}
+
+.spam-main > .spam-card + .spam-card {
+    margin-top: 20px;
+}
+
+.spam-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.spam-help {
+    margin-top: 7px;
+    color: #92969c;
+    font-size: 12px;
+    line-height: 1.8;
+}
+
+/* 开关保留原生键盘操作。 */
+.spam-switch {
+    position: relative;
+    display: block;
+    width: 40px;
+    height: 24px;
+    flex-shrink: 0;
+}
+
+.spam-switch input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    z-index: 1;
+    cursor: pointer;
+}
+
+.spam-switch-track {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: #d8dde3;
+    border-radius: 12px;
+}
+
+.spam-switch-track::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fff;
+}
+
+.spam-switch input:checked + .spam-switch-track {
+    background: #252a30;
+}
+
+.spam-switch input:checked + .spam-switch-track::after {
+    left: 19px;
+}
+
+.spam-switch input:focus-visible + .spam-switch-track {
+    outline: 2px solid #6683e2;
+    outline-offset: 3px;
+}
+
+/* 配置表单 */
+.spam-field {
+    margin-top: 24px;
+}
+
+.spam-label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.spam-input {
+    display: block;
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #e4e7ec;
+    border-radius: 7px;
+    background: #fafbfc;
+    color: var(--ink);
+    font: inherit;
+}
+
+textarea.spam-input {
+    resize: vertical;
+}
+
+.spam-input:focus {
+    outline: 2px solid #dfe6f3;
+    outline-offset: 1px;
+    border-color: #9caecb;
+}
+
+.spam-input::placeholder {
+    color: #a1a7af;
+}
+
+.spam-clear-key {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    color: #92969c;
+    margin-top: 10px;
+}
+
+.spam-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border-top: 1px solid var(--line);
+    margin-top: 24px;
+    padding-top: 24px;
+}
+
+.spam-actions .spam-help {
+    margin: 0;
+}
+
+.spam-card button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* 测试结果采用紧凑列表。 */
+#spam-test-form > .button {
+    margin-top: 24px;
+}
+
+#spam-test-form > .button:disabled {
+    opacity: 1;
+    cursor: wait;
+}
+
+.spam-test-result {
+    border-top: 1px solid var(--line);
+    padding-top: 16px;
+    margin-top: 20px;
+    overflow-wrap: anywhere;
+}
+
+.spam-test-result p {
+    font-size: 12px;
+    color: #92969c;
+    margin-top: 8px;
+}

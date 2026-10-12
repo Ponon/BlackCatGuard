@@ -7,7 +7,7 @@ from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from starlette.concurrency import run_in_threadpool
 
-from dao.models import Administrator, GroupConfig, VerificationSettings, WelcomeSettings
+from dao.models import Administrator, GroupConfig, VerificationSettings, WelcomeSettings, KeywordSettings, AISettings
 from services.telegram import inspect_group
 from services.network import get_proxy_url
 from utils.security import get_csrf_token, valid_csrf_token
@@ -65,7 +65,9 @@ async def save_config(request: Request, chat_id: str = Form(""), bot_token: str 
             await GroupConfig.filter(id=1).delete()
             await VerificationSettings.filter(id=1).update(enabled=False)
             await WelcomeSettings.filter(id=1).update(enabled=False)
-        return {"message": "群配置已清除，入群验证与欢迎语已关闭。", "configured": False, "chat_id": "", "bot_token": ""}
+            await KeywordSettings.filter(id=1).update(enabled=False)
+            await AISettings.filter(id=1).update(enabled=False)
+        return {"message": "群配置已清除，入群功能与广告拦截已关闭。", "configured": False, "chat_id": "", "bot_token": ""}
     if not re.fullmatch(r"[0-9]{1,20}:[A-Za-z0-9_-]{20,200}", token):
         raise HTTPException(status_code=400, detail="请输入有效的 Bot Token。")
     if not re.fullmatch(r"-[1-9][0-9]{0,19}", chat_id):

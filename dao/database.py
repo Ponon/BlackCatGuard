@@ -26,6 +26,7 @@ async def init_db():
     await Tortoise.generate_schemas(safe=True)
     await migrate_verification_settings()
     await migrate_welcome_settings()
+    await migrate_event_logs()
 
 
 # 程序关闭时释放数据库连接。
@@ -67,3 +68,11 @@ async def migrate_welcome_settings():
             "message": new_default if rows[0]["welcome_message"] == old_default else rows[0]["welcome_message"],
             "delete_after_seconds": rows[0]["delete_after_seconds"],
         })
+
+
+async def migrate_event_logs():
+    """为已有日志表补内容列，旧日志内容留空。"""
+    connection = Tortoise.get_connection("default")
+    columns = await connection.execute_query_dict('PRAGMA table_info("event_logs")')
+    if "content" not in {column["name"] for column in columns}:
+        await connection.execute_query("ALTER TABLE event_logs ADD COLUMN content TEXT NOT NULL DEFAULT ''")

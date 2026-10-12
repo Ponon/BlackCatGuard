@@ -18,7 +18,7 @@
                 </div>
             </div>
             <nav class="navigation" aria-label="主导航">
-                <a class="navigation-link{% if active_page not in ['group', 'settings', 'verification'] %} navigation-link--active{% endif %}" href="/" {% if active_page not in ['group', 'settings', 'verification'] %}aria-current="page"{% endif %}>
+                <a class="navigation-link{% if active_page not in ['group', 'settings', 'verification', 'antispam', 'events'] %} navigation-link--active{% endif %}" href="/" {% if active_page not in ['group', 'settings', 'verification', 'antispam', 'events'] %}aria-current="page"{% endif %}>
                     <img class="navigation-icon" src="{{ url_for('static', path='/images/dashboard.svg') }}" alt="" aria-hidden="true">
                     工作台
                 </a>
@@ -30,11 +30,11 @@
                     <img class="navigation-icon" src="{{ url_for('static', path='/images/verify.svg') }}" alt="" aria-hidden="true">
                     入群设置
                 </a>
-                <button type="button" class="navigation-link" data-notice="反垃圾规则功能即将接入。">
+                <a class="navigation-link{% if active_page == 'antispam' %} navigation-link--active{% endif %}" href="/antispam" {% if active_page == 'antispam' %}aria-current="page"{% endif %}>
                     <img class="navigation-icon" src="{{ url_for('static', path='/images/rules.svg') }}" alt="" aria-hidden="true">
-                    反垃圾规则
-                </button>
-                <a class="navigation-link" href="/#events">
+                    广告拦截
+                </a>
+                <a class="navigation-link{% if active_page == 'events' %} navigation-link--active{% endif %}" href="/events" {% if active_page == 'events' %}aria-current="page"{% endif %}>
                     <img class="navigation-icon" src="{{ url_for('static', path='/images/log.svg') }}" alt="" aria-hidden="true">
                     事件日志
                 </a>
