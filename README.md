@@ -4,6 +4,7 @@
   <p>一个机器人，一个群，让群管理更简单</p>
   <p>入群验证 · 欢迎消息 · 广告拦截 · 循环广播 · 事件推送</p>
   <p>
+    <a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-24292f?style=flat-square" alt="MIT License"></a>
     <a href="https://github.com/Ponon/BlackCatGuard/stargazers"><img src="https://img.shields.io/github/stars/Ponon/BlackCatGuard?style=flat-square&amp;color=24292f" alt="GitHub Stars"></a>
     <a href="https://github.com/Ponon/BlackCatGuard/forks"><img src="https://img.shields.io/github/forks/Ponon/BlackCatGuard?style=flat-square&amp;color=24292f" alt="GitHub Forks"></a>
     <img src="https://img.shields.io/badge/Python-3.13-3776AB?style=flat-square&amp;logo=python&amp;logoColor=white" alt="Python 3.13">
@@ -224,4 +225,4 @@ node tests/test_dashboard_live.js
 
 ## 许可证
 
-当前仓库尚未包含 `LICENSE` 文件，具体授权范围以维护者后续发布的许可证为准。
+本项目采用 [MIT License](./LICENSE) 开源，版权归 Ponon 所有。使用、修改或分发时，请保留版权声明和许可证全文。
