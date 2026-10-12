@@ -1,4 +1,5 @@
 """广告拦截配置和只读消息测试，不执行群内删除。"""
+from services.runtime_health import ensure_can_enable
 from typing import Annotated
 from types import SimpleNamespace
 import re
@@ -9,12 +10,13 @@ from fastapi.responses import RedirectResponse
 from starlette.concurrency import run_in_threadpool
 from tortoise.transactions import in_transaction
 
-from dao.models import Administrator, GroupConfig, KeywordSettings, AISettings, WhitelistSettings, EventLog
+from dao.models import ModerationSettings, Administrator, KeywordSettings, AISettings, WhitelistSettings, EventLog
 from routers.group import require_admin, require_csrf
 from services.antispam import classify_message
 from services.network import get_proxy_url
 from utils.security import get_csrf_token
 from utils.views import templates
+from services.configuration import group_is_configured, keyword_is_enabled, ai_is_enabled
 
 router = APIRouter()
 
@@ -22,8 +24,11 @@ router = APIRouter()
 async def require_group(enabled):
     if enabled not in ('true', 'false'):
         raise HTTPException(status_code=400, detail='启用状态不正确。')
-    if enabled == 'true' and not await GroupConfig.filter(id=1).select_for_update().exists():
-        raise HTTPException(status_code=409, detail='请先在群管理中配置机器人 Token 和群 ID。')
+    if enabled == 'true' and not await group_is_configured(lock=True):
+        raise HTTPException(status_code=409, detail='请先完成群管理配置')
+
+    if enabled == 'true':
+        await ensure_can_enable()
 
 
 @router.get('/antispam')
@@ -36,15 +41,19 @@ async def antispam_page(request: Request):
     keyword = await KeywordSettings.get_or_none(id=1)
     ai = await AISettings.get_or_none(id=1)
     whitelist = await WhitelistSettings.get_or_none(id=1)
-    configured = await GroupConfig.filter(id=1).exists()
+    actions = await ModerationSettings.get_or_none(id=1)
+    configured = await group_is_configured()
     return templates.TemplateResponse(request=request, name='antispam.html', context={
         'page_title': '广告拦截 · 黑猫群管', 'active_page': 'antispam',
         'username': admin.username, 'csrf_token': get_csrf_token(request), 'group_configured': configured,
-        'keyword_enabled': bool(configured and keyword and keyword.enabled),
+        'keyword_enabled': keyword_is_enabled(keyword, configured),
         'keywords': '\n'.join(keyword.keywords) if keyword else '',
-        'ai_enabled': bool(configured and ai and ai.enabled),
+        'ai_enabled': ai_is_enabled(ai, configured),
         'base_url': ai.base_url if ai else '', 'model': ai.model if ai else '',
         'has_api_key': bool(ai and ai.api_key),
+        'keyword_saved': keyword is not None, 'ai_saved': ai is not None,
+        'actions': actions,
+        'whitelist_saved': whitelist is not None,
         'whitelist': '\n'.join(whitelist.entries) if whitelist else '',
     }, headers={'Cache-Control': 'no-store'})
 
@@ -68,7 +77,7 @@ async def save_keywords(request: Request, enabled: Annotated[str, Form()] = 'fal
     async with in_transaction():
         await require_group(enabled)
         await KeywordSettings.update_or_create(id=1, defaults={'enabled': enabled == 'true', 'keywords': words})
-    return {'message': '关键词规则已保存。', 'keywords': '\n'.join(words)}
+    return {'message': '关键词规则已保存。', 'keywords': '\n'.join(words), 'enabled': enabled == 'true'}
 
 
 @router.post('/antispam/ai')
@@ -86,7 +95,7 @@ async def save_ai(request: Request, enabled: Annotated[str, Form()] = 'false', b
         except ValueError:
             valid = False
         if not valid or len(base_url) > 2048 or any(c.isspace() for c in base_url):
-            raise HTTPException(status_code=400, detail='请输入有效的接口基础地址，如 https://服务地址/v1。')
+            raise HTTPException(status_code=400, detail='请输入有效的接口基础地址')
         if base_url.endswith('/chat/completions'):
             base_url = base_url[:-len('/chat/completions')]
     if len(model) > 128 or len(api_key) > 4096 or any(ord(c) < 32 for c in model + api_key):
@@ -98,7 +107,7 @@ async def save_ai(request: Request, enabled: Annotated[str, Form()] = 'false', b
         old = await AISettings.get_or_none(id=1)
         key = '' if clear_api_key == 'true' else (api_key or (old.api_key if old else ''))
         await AISettings.update_or_create(id=1, defaults={'enabled': enabled == 'true', 'base_url': base_url, 'model': model, 'api_key': key})
-    return {'message': 'AI 识别配置已保存。', 'has_api_key': bool(key), 'base_url': base_url}
+    return {'message': 'AI 识别配置已保存。', 'has_api_key': bool(key), 'base_url': base_url, 'model': model, 'enabled': enabled == 'true'}
 
 
 @router.post('/antispam/test')
@@ -118,7 +127,7 @@ async def test_message(request: Request, text: Annotated[str, Form()] = '', csrf
     whitelist = await WhitelistSettings.get_or_none(id=1)
     entries = whitelist.entries if whitelist else []
     if keyword is None and ai is None and not entries:
-        raise HTTPException(status_code=400, detail='请先保存关键词，或保存完整的 AI 接口地址和模型名称，无需启用规则。')
+        raise HTTPException(status_code=400, detail='请先保存关键词或完整的 AI 配置')
     result = await run_in_threadpool(classify_message, text, keyword, ai, await get_proxy_url(), entries, user_id, username)
     await EventLog.create(event_type='消息测试', content=text, username='@' + username if username else '', result=result['message'][:500])
     return result
@@ -145,3 +154,16 @@ async def save_whitelist(request: Request, entries: Annotated[str, Form()] = '',
         raise HTTPException(status_code=400, detail='白名单最多 500 个用户。')
     await WhitelistSettings.update_or_create(id=1, defaults={'entries': values})
     return {'message': '白名单已保存。', 'entries': '\n'.join(values)}
+
+
+@router.post('/antispam/actions')
+async def save_actions(request: Request, message_action: Annotated[str, Form()] = 'single',
+                       restrict_user: Annotated[str, Form()] = 'false', kick_user: Annotated[str, Form()] = 'false',
+                       csrf_token: Annotated[str, Form()] = ''):
+    await require_admin(request)
+    require_csrf(request, csrf_token)
+    if message_action not in ('single', 'all') or restrict_user not in ('true', 'false') or kick_user not in ('true', 'false'):
+        raise HTTPException(status_code=400, detail='请选择有效的垃圾消息处置方式')
+    await ModerationSettings.update_or_create(id=1, defaults={
+        'message_action': message_action, 'restrict_user': restrict_user == 'true', 'kick_user': kick_user == 'true'})
+    return {'message': '处置方式已保存'}

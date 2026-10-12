@@ -30,7 +30,7 @@ class VerificationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(await VerificationSettings.all().count(), 1)
         html = (await verification_page(self.request)).body.decode()
         self.assertIn('value="arithmetic" checked', html)
-        self.assertIn('执行服务待接入', html)
+        self.assertIn('入群处理说明', html)
         self.assertIn('role="switch"', html)
 
     async def test_invalid_values_and_csrf(self):
@@ -100,3 +100,62 @@ class VerificationTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(HTTPException) as error:
             await save_verification(self.request, 'true', 'button', 'token')
         self.assertEqual(error.exception.status_code, 401)
+
+    async def test_saved_state_and_normalized_response(self):
+        response = await verification_page(self.request)
+        self.assertFalse(response.context['verification_saved'])
+        self.assertFalse(response.context['welcome_saved'])
+        result = await save_verification(self.request, 'true', 'arithmetic', 'token', '0120')
+        self.assertEqual(result['timeout_seconds'], 120)
+        result = await save_welcome(self.request, 'true', '欢迎 {nickname}', '0', 'token')
+        self.assertTrue(result['enabled'])
+        self.assertEqual(result['delete_after_seconds'], 0)
+        response = await verification_page(self.request)
+        self.assertTrue(response.context['verification_saved'])
+        self.assertTrue(response.context['welcome_saved'])
+        await GroupConfig.filter(id=1).update(bot_token='')
+        response = await verification_page(self.request)
+        self.assertFalse(response.context['group_configured'])
+        self.assertFalse(response.context['enabled'])
+        self.assertFalse(response.context['welcome_enabled'])
+        with self.assertRaises(HTTPException) as error:
+            await save_verification(self.request, 'true', 'button', 'token')
+        self.assertEqual(error.exception.status_code, 409)
+
+    async def test_failure_actions_save_render_and_validation(self):
+        result = await save_verification(self.request, 'true', 'arithmetic', 'token', '90', 'restrict', 'kick')
+        self.assertEqual(result['timeout_action'], 'restrict')
+        self.assertEqual(result['wrong_action'], 'kick')
+        settings = await VerificationSettings.get(id=1)
+        self.assertEqual((settings.timeout_action, settings.wrong_action), ('restrict', 'kick'))
+        html = (await verification_page(self.request)).body.decode()
+        self.assertIn('name="timeout_action"', html)
+        self.assertIn('name="wrong_action"', html)
+        for timeout_action, wrong_action in [('retry', 'kick'), ('kick', 'invalid')]:
+            with self.assertRaises(HTTPException) as error:
+                await save_verification(self.request, 'true', 'button', 'token', '60', timeout_action, wrong_action)
+            self.assertEqual(error.exception.status_code, 400)
+
+    async def test_failure_action_migration_keeps_existing_settings(self):
+        from dao.database import migrate_join_actions
+        await save_verification(self.request, 'false', 'arithmetic', 'token', '120', 'restrict', 'kick')
+        await migrate_join_actions()
+        await migrate_join_actions()
+        settings = await VerificationSettings.get(id=1)
+        self.assertEqual((settings.timeout_seconds, settings.timeout_action, settings.wrong_action), (120, 'restrict', 'kick'))
+
+    async def test_wrong_action_none_and_legacy_migration(self):
+        from dao.database import migrate_join_actions
+        result = await save_verification(self.request, 'true', 'arithmetic', 'token', '60', 'kick', 'none')
+        self.assertEqual(result['wrong_action'], 'none')
+        html = (await verification_page(self.request)).body.decode()
+        self.assertIn('value="none" selected>无</option>', html)
+        self.assertNotIn('允许重新作答', html)
+        await VerificationSettings.all().update(wrong_action='retry')
+        await migrate_join_actions()
+        self.assertEqual((await VerificationSettings.get()).wrong_action, 'none')
+        await VerificationSettings.all().update(wrong_action='restrict')
+        await migrate_join_actions()
+        self.assertEqual((await VerificationSettings.get()).wrong_action, 'restrict')
+        with self.assertRaises(HTTPException):
+            await save_verification(self.request, 'true', 'arithmetic', 'token', '60', 'kick', 'retry')

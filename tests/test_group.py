@@ -104,6 +104,23 @@ class GroupTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(error.exception.status_code, 409)
 
 
+    async def test_switch_group_stops_features_and_old_sessions_but_same_config_preserves(self):
+        from dao.models import BroadcastContent, BroadcastTask, JoinSession, KeywordSettings
+        await self.save()
+        await VerificationSettings.create(id=1, enabled=True)
+        await KeywordSettings.create(id=1, enabled=True, keywords=['广告'])
+        content = await BroadcastContent.create(name='公告', message='正文')
+        await BroadcastTask.create(content=content, enabled=True)
+        await JoinSession.create(id='old', bot_key='old', chat_id='-1001234567890', user_id=1, user={'id': 1}, state='pending')
+        await self.save()
+        self.assertTrue((await VerificationSettings.get()).enabled)
+        await save_config(self.request, '-1002', TOKEN, 'token')
+        self.assertFalse((await VerificationSettings.get()).enabled)
+        self.assertFalse((await KeywordSettings.get()).enabled)
+        self.assertFalse((await BroadcastTask.get()).enabled)
+        self.assertEqual((await JoinSession.get()).state, 'done')
+
+
 class TelegramTests(unittest.TestCase):
     def responses(self, permissions=True, chat_type='supergroup'):
         return [

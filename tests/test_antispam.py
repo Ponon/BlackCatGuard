@@ -61,6 +61,19 @@ class ConfigTests(unittest.IsolatedAsyncioTestCase):
     async def asyncTearDown(self):
         await Tortoise.close_connections()
 
+    async def test_actions_saved_validated_and_rendered(self):
+        from routers.antispam import save_actions
+        from dao.models import ModerationSettings
+        await save_actions(self.request, 'all', 'true', 'false', 'token')
+        saved = await ModerationSettings.get(id=1)
+        self.assertEqual(saved.message_action, 'all')
+        self.assertTrue(saved.restrict_user)
+        html = (await antispam_page(self.request)).body.decode()
+        self.assertIn('id="moderation-actions-form"', html)
+        for args in [('invalid', 'true', 'false', 'token'), ('all', 'bad', 'false', 'token'), ('all', 'true', 'false', 'wrong')]:
+            with self.assertRaises(HTTPException):
+                await save_actions(self.request, *args)
+
     async def test_independent_save_and_key_preservation(self):
         result = await save_keywords(self.request, 'true', '广告\nFREE\nfree\n', 'token')
         self.assertEqual(result['keywords'], '广告\nFREE')
@@ -110,4 +123,24 @@ class ConfigTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(HTTPException) as error:
             await test_message(self.request, '消息', 'token')
         self.assertEqual(error.exception.status_code, 400)
-        self.assertIn('无需启用', error.exception.detail)
+        self.assertIn('请先保存关键词或完整的 AI 配置', error.exception.detail)
+
+    async def test_saved_state_and_incomplete_group(self):
+        response = await antispam_page(self.request)
+        self.assertFalse(response.context['keyword_saved'])
+        self.assertFalse(response.context['ai_saved'])
+        result = await save_keywords(self.request, 'true', '广告', 'token')
+        self.assertTrue(result['enabled'])
+        result = await save_ai(self.request, 'true', 'http://localhost/v1', ' model ', '', 'false', 'token')
+        self.assertEqual(result['model'], 'model')
+        response = await antispam_page(self.request)
+        self.assertTrue(response.context['keyword_saved'])
+        self.assertTrue(response.context['ai_saved'])
+        await GroupConfig.filter(id=1).update(chat_id='')
+        response = await antispam_page(self.request)
+        self.assertFalse(response.context['group_configured'])
+        self.assertFalse(response.context['keyword_enabled'])
+        self.assertFalse(response.context['ai_enabled'])
+        with self.assertRaises(HTTPException) as error:
+            await save_keywords(self.request, 'true', '广告', 'token')
+        self.assertEqual(error.exception.status_code, 409)

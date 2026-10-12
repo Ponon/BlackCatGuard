@@ -1,20 +1,21 @@
-// 三个表单独立提交，配置和测试均不刷新页面。
+const spamConfigStates = [];
+// 各配置表单独立提交；消息测试只使用已保存的配置。
 function bindSpamForm(form, onSuccess) {
     const button = form.querySelector('button[type="submit"]');
     let busy = false;
     const toggle = form.elements.enabled;
     const state = form.querySelector('[data-save-state]');
+    const formState = state ? trackFormState(form, state) : null;
+    if (formState) spamConfigStates.push(formState);
     if (toggle) {
         toggle.addEventListener('change', () => {
             if (toggle.checked && form.dataset.groupConfigured !== 'true') {
                 toggle.checked = false;
-                showError('请先在群管理中配置机器人 Token 和群 ID。');
+                formState.refresh();
+                showError('请先完成群管理配置');
             }
         });
     }
-    form.addEventListener('input', () => {
-        if (state) state.textContent = '有未保存修改';
-    });
     form.addEventListener('submit', async event => {
         event.preventDefault();
         if (busy) return;
@@ -29,6 +30,9 @@ function bindSpamForm(form, onSuccess) {
         const data = new FormData(form);
         if (toggle) data.set('enabled', String(toggle.checked));
         if (form.elements.clear_api_key) data.set('clear_api_key', String(form.elements.clear_api_key.checked));
+        for (const name of ['restrict_user', 'kick_user']) {
+            if (form.elements[name]) data.set(name, String(form.elements[name].checked));
+        }
         const label = button.textContent;
         busy = true;
         button.textContent = form.id === 'spam-test-form' ? '判断中…' : '保存中…';
@@ -47,17 +51,16 @@ function bindSpamForm(form, onSuccess) {
             if (!response.ok) {
                 if (testResult) testResult.textContent = '本次测试未完成，请检查提示后重试。';
                 if (response.status === 409 && toggle) {
-                    form.dataset.groupConfigured = 'false';
-                    toggle.checked = false;
+                    resetGroupDependentForms();
                 }
                 showError(typeof result.detail === 'string' ? result.detail : '操作失败，请检查配置。');
                 return;
             }
             onSuccess(result);
-            if (state) state.textContent = '已保存';
+            if (formState) formState.markSaved();
         } catch {
             if (testResult) testResult.textContent = '本次测试失败，请重试。';
-            showError('请求失败，请检查网络后重试。');
+            showError('网络请求失败请稍后重试');
         } finally {
             if (testResult) testResult.setAttribute('aria-busy', 'false');
             busy = false;
@@ -71,6 +74,7 @@ function bindSpamForm(form, onSuccess) {
 const keywordForm = document.querySelector('#keyword-form');
 bindSpamForm(keywordForm, result => {
     keywordForm.elements.keywords.value = result.keywords;
+    keywordForm.elements.enabled.checked = result.enabled;
     showError(result.message, true);
 });
 
@@ -80,6 +84,8 @@ bindSpamForm(aiForm, result => {
     aiForm.elements.api_key.placeholder = result.has_api_key ? '已保存，留空保留原密钥' : '本地无鉴权服务可留空';
     aiForm.elements.clear_api_key.checked = false;
     aiForm.elements.base_url.value = result.base_url;
+    aiForm.elements.model.value = result.model;
+    aiForm.elements.enabled.checked = result.enabled;
     showError(result.message, true);
 });
 
@@ -104,3 +110,15 @@ bindSpamForm(whitelistForm, result => {
     whitelistForm.elements.entries.value = result.entries;
     showError(result.message, true);
 });
+
+// 预览与实际测试的配置来源明确区分。
+function updateTestHint() {
+    document.querySelector('#spam-test-hint').hidden = !spamConfigStates.some(state => state.isDirty());
+}
+for (const form of [keywordForm, aiForm, whitelistForm]) {
+    form.addEventListener('form-state-change', updateTestHint);
+}
+updateTestHint();
+
+const moderationActionsForm = document.querySelector('#moderation-actions-form');
+bindSpamForm(moderationActionsForm, result => showError(result.message, true));

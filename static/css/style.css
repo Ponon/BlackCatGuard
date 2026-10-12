@@ -376,6 +376,8 @@ h2 {
 }
 
 .stat-value--text {
+	max-width: 100%;
+	overflow-wrap: anywhere;
 	font-size: 20px;
 	margin-top: 18px;
 	margin-bottom: 4px;
@@ -629,6 +631,7 @@ h3 {
 
 .tips a {
 	display: inline-flex;
+	align-items: center;
 	gap: 15px;
 	font-size: 14px;
 	color: #686f79;
@@ -638,14 +641,155 @@ h3 {
 /* 页脚 */
 .page-footer {
 	display: flex;
-	justify-content: space-between;
+	align-items: center;
+	gap: 7px;
 	padding: 26px 0;
 	color: #aeb3bb;
 	font-size: 12px;
+}
+
+.home-main {
+	min-width: 0;
+}
+
+.project-icon {
+	width: 14px;
+	height: 14px;
+	flex-shrink: 0;
 }
 
 /* 开源项目链接 */
 .project-link:hover {
 	color: var(--ink);
 	text-decoration: underline;
+}
+
+/* 首页实际状态与最近事件。 */
+.feature-status--enabled {
+	color: #438965;
+}
+
+/* 首页事件表格只展示最新五条，超宽时在卡片内滚动。 */
+.recent-events-wrap {
+	margin-top: 20px;
+	overflow-x: auto;
+}
+
+.recent-events-table {
+	width: 100%;
+	border-collapse: collapse;
+	text-align: left;
+	font-size: 14px;
+}
+
+.recent-events-table th,
+.recent-events-table td {
+	padding: 12px;
+	border-bottom: 1px solid var(--line);
+	vertical-align: top;
+}
+
+.recent-events-table th {
+	background: #f8f9fb;
+	color: #727984;
+	font-weight: 500;
+	white-space: nowrap;
+}
+
+.recent-events-time {
+	white-space: nowrap;
+}
+
+.recent-events-content,
+.recent-events-result {
+	min-width: 140px;
+	max-width: 240px;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+
+/* 显式隐藏状态优先于各模块的 flex 与 grid 布局。 */
+[hidden] {
+	display: none !important;
+}
+
+/* 密钥输入框统一采用独立的显隐按钮，与推送地址保持一致。 */
+.secret-field {
+    display: flex;
+    gap: 8px;
+}
+
+.secret-field > input {
+    flex: 1;
+    min-width: 0;
+}
+
+.secret-field > .button {
+    flex-shrink: 0;
+}
+
+/* 后台连接指示：状态点与文字并列，延迟采用辅助字号。 */
+.stat-connection {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+    margin-top: 18px;
+    margin-bottom: 4px;
+    --connection-color: #a1a7af;
+}
+
+.stat-connection[data-tone="good"] { --connection-color: #46825f; }
+.stat-connection[data-tone="slow"],
+.stat-connection[data-tone="error"] { --connection-color: #c45b58; }
+.stat-connection[data-tone="warning"] { --connection-color: #b78235; }
+
+.connection-dot {
+    position: relative;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--connection-color);
+    flex-shrink: 0;
+}
+
+.connection-dot::after {
+    content: "";
+    position: absolute;
+    inset: -4px;
+    border: 1px solid var(--connection-color);
+    border-radius: 50%;
+    opacity: 0;
+}
+
+.stat-connection[data-tone="good"] .connection-dot::after,
+.stat-connection[data-tone="slow"] .connection-dot::after,
+.stat-connection[data-tone="warning"] .connection-dot::after,
+.stat-connection[data-tone="checking"] .connection-dot::after {
+    animation: connection-pulse 2s ease-out infinite;
+}
+
+.connection-latency strong {
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+}
+
+.stat:has(.stat-connection[data-tone="slow"]) .connection-latency strong {
+    color: #c45b58;
+}
+
+@keyframes connection-pulse {
+    from { transform: scale(.5); opacity: .65; }
+    to { transform: scale(1.35); opacity: 0; }
+}
+
+
+.stat-connection .stat-value {
+    margin: 0;
+}
+
+.stat-connection-note {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
 }

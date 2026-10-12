@@ -104,9 +104,9 @@ async def setup_submit(
 
     # 异步提交由前端保存一次性成功提示，再跳转登录页。
     if "application/json" in request.headers.get("accept", ""):
-        return JSONResponse({"message": "管理员创建成功，请登录。", "redirect": "/login"})
+        return JSONResponse({"message": "管理员创建成功请登录", "redirect": "/login"})
 
-    request.session["success_message"] = "管理员创建成功，请登录。"
+    request.session["success_message"] = "管理员创建成功请登录"
     # 跳转到登录页面。
     return RedirectResponse("/login", status_code=303)
 

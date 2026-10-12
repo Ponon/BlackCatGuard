@@ -6,6 +6,8 @@ let configured = !checkButton.disabled;
 let dirty = false;
 let busy = false;
 let saving = false;
+const configSnapshot = () => JSON.stringify([groupForm.elements.bot_token.value, groupForm.elements.chat_id.value]);
+let savedConfig = configSnapshot();
 
 function setBusy(value) {
     busy = value;
@@ -71,9 +73,9 @@ async function postForm(url, data) {
 
 // 修改后的内容须先保存，检测始终对应已保存配置。
 groupForm.addEventListener('input', () => {
-    dirty = true;
-    document.querySelector('#config-status').textContent = '有未保存修改';
-    clearResult('配置已修改，请保存后重新检测。');
+    dirty = configSnapshot() !== savedConfig;
+    document.querySelector('#config-status').textContent = dirty ? '有未保存修改' : (configured ? '已保存' : '未配置');
+    clearResult(dirty ? '配置已修改，请保存后重新检测。' : '点击下方按钮检测当前配置。');
     setBusy(busy);
 });
 
@@ -93,7 +95,7 @@ groupForm.addEventListener('submit', async event => {
     }
     if (!clearing && !/^-[1-9][0-9]{0,19}$/.test(chatId)) {
         groupForm.elements.chat_id.focus();
-        showError('请输入有效的群数字 ID，例如 -1001234567890。');
+        showError('请输入有效的群数字 ID');
         return;
     }
     saving = true;
@@ -107,12 +109,13 @@ groupForm.addEventListener('submit', async event => {
         setTokenVisible(false);
         groupForm.elements.bot_token.placeholder = '请输入 BotFather 提供的 Token';
         groupForm.elements.chat_id.value = result.chat_id;
+        savedConfig = configSnapshot();
         document.querySelector('#config-status').textContent = configured ? '已保存' : '未配置';
         if (result.check_result) displayResult(result.check_result);
         else clearResult('保存配置后，点击下方按钮开始检测。');
         showError(result.message, !result.check_result || result.check_result.ok);
     } catch (error) {
-        showError(error instanceof TypeError ? '请求失败，请检查网络后重试。' : error.message);
+        showError(error instanceof TypeError ? '网络请求失败请稍后重试' : error.message);
     } finally {
         saveButton.textContent = '保存配置';
         saving = false;
@@ -124,6 +127,8 @@ checkButton.addEventListener('click', async () => {
     if (busy || dirty || !configured) return;
     setBusy(true);
     checkButton.textContent = '检测中…';
+    document.querySelector('#check-status').textContent = '检测中…';
+    document.querySelector('#check-message').textContent = '正在检测已保存的配置，请稍候。';
     try {
         const data = new FormData();
         data.set('csrf_token', groupForm.elements.csrf_token.value);
@@ -132,7 +137,9 @@ checkButton.addEventListener('click', async () => {
         if (!dirty) displayResult(result);
         showError(result.message, result.ok);
     } catch (error) {
-        showError(error instanceof TypeError ? '请求失败，请检查网络后重试。' : error.message);
+        clearResult('本次检测未完成，请重试。');
+        document.querySelector('#check-status').textContent = '检测未完成';
+        showError(error instanceof TypeError ? '网络请求失败请稍后重试' : error.message);
     } finally {
         checkButton.textContent = '检测配置';
         setBusy(false);

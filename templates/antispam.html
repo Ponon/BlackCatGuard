@@ -10,6 +10,7 @@
         <link rel="stylesheet" href="{{ url_for('static', path='/css/toast.css') }}">
         <script src="{{ url_for('static', path='/js/toast.js') }}?v=20261012-4" defer></script>
         <script src="{{ url_for('static', path='/js/dashboard.js') }}" defer></script>
+        <script src="{{ url_for('static', path='/js/form-state.js') }}" defer></script>
         <script src="{{ url_for('static', path='/js/antispam.js') }}" defer></script>
     </head>
     <body>
@@ -25,11 +26,14 @@
             <div class="spam-layout">
                 <div class="spam-main">
                     <section class="panel spam-card">
-                        <form id="keyword-form" class="spam-form" action="/antispam/keywords" method="post" novalidate data-group-configured="{{ 'true' if group_configured else 'false' }}">
+                        <form id="keyword-form" data-saved="{{ 'true' if keyword_saved else 'false' }}" class="spam-form" action="/antispam/keywords" method="post" novalidate data-group-configured="{{ 'true' if group_configured else 'false' }}">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                             <div class="spam-heading">
                                 <div><h2>关键词拦截</h2><p class="spam-help">包含任一关键词即命中，英文不区分大小写。</p></div>
-                                <label class="spam-switch"><input name="enabled" type="checkbox" role="switch" aria-label="启用关键词拦截" {% if keyword_enabled %}checked{% endif %}><span class="spam-switch-track" aria-hidden="true"></span></label>
+                                <div class="spam-switch-area">
+                                    <span data-toggle-status>{{ '已开启设置' if keyword_enabled else '已关闭' }}</span>
+                                    <label class="spam-switch"><input name="enabled" type="checkbox" role="switch" aria-label="启用关键词拦截" {% if keyword_enabled %}checked{% endif %}><span class="spam-switch-track" aria-hidden="true"></span></label>
+                                </div>
                             </div>
                             <div class="spam-field">
                                 <label class="spam-label" for="keywords">关键词</label>
@@ -40,11 +44,17 @@
                         </form>
                     </section>
                     <section class="panel spam-card">
-                        <form id="ai-form" class="spam-form" action="/antispam/ai" method="post" novalidate data-group-configured="{{ 'true' if group_configured else 'false' }}">
+                        <form id="ai-form" data-saved="{{ 'true' if ai_saved else 'false' }}" class="spam-form" action="/antispam/ai" method="post" novalidate data-group-configured="{{ 'true' if group_configured else 'false' }}">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                             <div class="spam-heading">
                                 <div><h2>AI 识别</h2><p class="spam-help">通过 OpenAI 兼容接口识别广告、诈骗与恶意引流。</p></div>
-                                <label class="spam-switch"><input name="enabled" type="checkbox" role="switch" aria-label="启用 AI 识别" {% if ai_enabled %}checked{% endif %}><span class="spam-switch-track" aria-hidden="true"></span></label>
+                                <div class="spam-switch-area">
+                                    <span data-toggle-status>{{ '已开启设置' if ai_enabled else '已关闭' }}</span>
+                                    <label class="spam-switch">
+                                        <input name="enabled" type="checkbox" role="switch" aria-label="启用 AI 识别" {% if ai_enabled %}checked{% endif %}>
+                                        <span class="spam-switch-track" aria-hidden="true"></span>
+                                    </label>
+                                </div>
                             </div>
                             <div class="spam-field"><label class="spam-label" for="ai-base-url">接口基础地址</label><input class="spam-input" id="ai-base-url" name="base_url" value="{{ base_url }}" maxlength="2048" placeholder="填写服务商或本地模型基础地址" autocomplete="off"><p class="spam-help">填写服务商提供的基础地址（通常以 /v1 结尾），程序会追加 /chat/completions。</p></div>
                             <div class="spam-field"><label class="spam-label" for="ai-model">模型名称</label><input class="spam-input" id="ai-model" name="model" value="{{ model }}" maxlength="128" placeholder="填写接口支持的模型名称" autocomplete="off"></div>
@@ -53,7 +63,7 @@
                         </form>
                     </section>
                     <section class="panel spam-card">
-                        <form id="whitelist-form" class="spam-form" action="/antispam/whitelist" method="post" novalidate>
+                        <form id="whitelist-form" data-saved="{{ 'true' if whitelist_saved else 'false' }}" class="spam-form" action="/antispam/whitelist" method="post" novalidate>
                             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                             <h2>白名单设置</h2>
                             <p class="spam-help">白名单用户直接放行，不进行关键词和 AI 判断，仅影响广告拦截。</p>
@@ -68,12 +78,34 @@
                             </div>
                         </form>
                     </section>
+                    <section class="panel spam-card">
+                        <form id="moderation-actions-form" class="spam-form" action="/antispam/actions" method="post" data-saved="{{ 'true' if actions else 'false' }}" novalidate>
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <h2>垃圾消息处置</h2>
+                            <p class="spam-help">关键词或 AI 判定为垃圾消息后执行以下操作</p>
+                            <fieldset class="spam-action-group">
+                                <legend class="spam-label">消息处理</legend>
+                                <label><input type="radio" name="message_action" value="single" {% if not actions or actions.message_action == 'single' %}checked{% endif %}>删除该条消息</label>
+                                <label><input type="radio" name="message_action" value="all" {% if actions and actions.message_action == 'all' %}checked{% endif %}>删除该用户所有消息</label>
+                                <p class="spam-help">仅能清理机器人运行期间已接收且发送未满 48 小时的消息，无法读取完整历史记录</p>
+                            </fieldset>
+                            <fieldset class="spam-action-group">
+                                <legend class="spam-label">成员处理</legend>
+                                <label><input type="checkbox" name="restrict_user" value="true" {% if actions and actions.restrict_user %}checked{% endif %}>封禁用户所有权限</label>
+                                <label><input type="checkbox" name="kick_user" value="true" {% if actions and actions.kick_user %}checked{% endif %}>踢出用户</label>
+                                <p class="spam-help">可不勾选，同时勾选时优先踢出，踢出后允许重新加入</p>
+                                <p class="spam-help">超级群踢出用户时 Telegram 会同时清理其消息</p>
+                            </fieldset>
+                            <div class="spam-actions"><button class="button button--primary" type="submit">保存处置方式</button><span class="spam-help" data-save-state>修改后请保存</span></div>
+                        </form>
+                    </section>
                     {% include 'partials/footer.html' %}
                 </div>
                 <aside class="sidebar">
                     <section class="panel spam-card">
                         <h2>消息测试</h2>
                         <p class="spam-help">使用已保存的关键词和配置完整的 AI 测试，无需启用规则或配置群管理。AI 配置完整时，测试消息可能发往该接口并产生费用。测试不会改变启用状态。</p>
+                        <p class="spam-help" id="spam-test-hint" hidden>配置有未保存修改，本次测试使用上次保存的配置。</p>
                         <form id="spam-test-form" action="/antispam/test" method="post" novalidate>
                             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                             <div class="spam-field"><label class="spam-label" for="test-message">测试消息</label><textarea class="spam-input" id="test-message" name="text" rows="4" maxlength="10000" placeholder="输入要判断的消息"></textarea></div>
@@ -89,7 +121,7 @@
                         </form>
                         <div class="spam-test-result" id="spam-test-result" role="status" hidden></div>
                     </section>
-                    <section class="panel spam-card"><h3>判断规则</h3><p class="spam-help">任一种判断为垃圾，即命中拦截。关键词已经命中时跳过 AI，减少调用。AI 请求失败时显示判断未完成。</p><p class="spam-help">当前可配置并测试消息；群消息接收与自动删除服务尚未接入。</p></section>
+                    <section class="panel spam-card"><h3>判断规则</h3><p class="spam-help">任一种判断为垃圾，即命中拦截。关键词已经命中时跳过 AI，减少调用。AI 请求失败时保留消息并记录失败。</p><p class="spam-help">开启后处理群成员的文字与媒体说明，也检查编辑后的消息。白名单先行放行，机器人消息与匿名发送者跳过。命中后自动删除并记录处理结果。</p></section>
                 </aside>
             </div>
         </main>

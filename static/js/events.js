@@ -35,7 +35,7 @@ clearForm.addEventListener('submit', async event => {
         window.location.replace(url.toString());
     } catch {
         clearDialog.close();
-        showError('请求失败，请检查网络后重试。');
+        showError('网络请求失败请稍后重试');
     } finally {
         clearing = false;
         button.textContent = '确认清空';

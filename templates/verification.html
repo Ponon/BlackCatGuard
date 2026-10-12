@@ -10,7 +10,8 @@
         <link rel="stylesheet" href="{{ url_for('static', path='/css/toast.css') }}">
         <script src="{{ url_for('static', path='/js/toast.js') }}?v=30261012-4" defer></script>
         <script src="{{ url_for('static', path='/js/dashboard.js') }}" defer></script>
-        <script src="{{ url_for('static', path='/js/verification.js') }}?v=4" defer></script>
+        <script src="{{ url_for('static', path='/js/form-state.js') }}" defer></script>
+        <script src="{{ url_for('static', path='/js/verification.js') }}?v=5" defer></script>
     </head>
     <body>
         {% include 'partials/header.html' %}
@@ -28,7 +29,7 @@
             <div class="verification-layout">
                 <div>
                     <section class="panel verification-config">
-                        <form id="verification-form" data-group-configured="{{ 'true' if group_configured else 'false' }}" action="/verification" method="post" novalidate>
+                        <form id="verification-form" data-saved="{{ 'true' if verification_saved else 'false' }}" data-group-configured="{{ 'true' if group_configured else 'false' }}" action="/verification" method="post" novalidate>
                             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                             <div class="verification-heading">
                                 <div>
@@ -36,7 +37,7 @@
                                     <p class="verification-help">关闭时保留设置，方便下次继续使用。</p>
                                 </div>
                                 <div class="verification-switch-area">
-                                    <span id="verification-status">{{ '已选择启用' if enabled else '已关闭' }}</span>
+                                    <span id="verification-status" data-toggle-status>{{ '已开启设置' if enabled else '已关闭' }}</span>
                                     <label class="verification-switch">
                                         <input id="verification-enabled" name="enabled" type="checkbox" role="switch" aria-label="启用入群验证" {% if enabled %}checked{% endif %}>
                                         <span class="verification-switch-track" aria-hidden="true"></span>
@@ -67,14 +68,28 @@
                                 <input class="verification-input" id="timeout-seconds" name="timeout_seconds" type="number" min="10" max="3600" step="1" value="{{ timeout_seconds }}" required>
                                 <p class="verification-help">成员完成验证的时间，10～3600 秒。</p>
                             </div>
+                            <div class="verification-section"><label class="verification-label" for="timeout_action">验证超时处理</label>
+                                <select class="verification-input" id="timeout_action" name="timeout_action">
+                                    <option value="restrict" {% if timeout_action == 'restrict' %}selected{% endif %}>限制用户所有权限</option>
+                                    <option value="kick" {% if timeout_action == 'kick' %}selected{% endif %}>踢出用户</option>
+                                </select>
+                            </div>
+                            <div class="verification-section"><label class="verification-label" for="wrong_action">回答错误处理</label>
+                                <select class="verification-input" id="wrong_action" name="wrong_action">
+                                    <option value="none" {% if wrong_action == 'none' %}selected{% endif %}>无</option>
+                                    <option value="restrict" {% if wrong_action == 'restrict' %}selected{% endif %}>限制用户所有权限</option>
+                                    <option value="kick" {% if wrong_action == 'kick' %}selected{% endif %}>踢出用户</option>
+                                </select>
+                            </div>
+                            <p class="verification-help">选择无时，答错不执行额外处罚，仍需完成验证且不重置倒计时；限制权限会保留用户在群内，踢出后允许重新加入</p>
                             <div class="verification-actions">
                                 <button type="submit" class="button button--primary" id="save-verification">保存设置</button>
-                                <span class="verification-help" id="verification-save-state">修改后请保存</span>
+                                <span class="verification-help" id="verification-save-state">{{ '已保存' if verification_saved else '尚未保存' }}</span>
                             </div>
                         </form>
                     </section>
-                    <section class="panel verification-config welcome-config">
-                        <form id="welcome-form" data-group-configured="{{ 'true' if group_configured else 'false' }}" action="/welcome" method="post" novalidate>
+                    <section class="panel verification-config welcome-config" id="welcome-settings">
+                        <form id="welcome-form" data-saved="{{ 'true' if welcome_saved else 'false' }}" data-group-configured="{{ 'true' if group_configured else 'false' }}" action="/welcome" method="post" novalidate>
                             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                             <div class="verification-heading">
                                 <div>
@@ -82,7 +97,7 @@
                                     <p class="verification-help">独立启用，不受验证开关控制。</p>
                                 </div>
                                 <div class="verification-switch-area">
-                                    <span id="welcome-status">{{ '已选择启用' if welcome_enabled else '已关闭' }}</span>
+                                    <span id="welcome-status" data-toggle-status>{{ '已开启设置' if welcome_enabled else '已关闭' }}</span>
                                     <label class="verification-switch">
                                         <input id="welcome-enabled" name="enabled" type="checkbox" role="switch" aria-label="启用入群欢迎语" {% if welcome_enabled %}checked{% endif %}>
                                         <span class="verification-switch-track" aria-hidden="true"></span>
@@ -106,7 +121,7 @@
                             </div>
                             <div class="verification-actions">
                                 <button type="submit" class="button button--primary" id="save-welcome">保存欢迎语</button>
-                                <span class="verification-help" id="welcome-save-state">修改后请保存</span>
+                                <span class="verification-help" id="welcome-save-state">{{ '已保存' if welcome_saved else '尚未保存' }}</span>
                             </div>
                         </form>
                     </section>
@@ -139,11 +154,11 @@
                             <span class="small-badge">示意</span>
                         </div>
                         <div class="verification-message"><p id="preview-welcome"></p></div>
-                        <p class="verification-help">已开启验证：验证通过 → 删除验证消息 → 发送欢迎语。未开启验证：新成员入群后直接发送欢迎语。欢迎语关闭时均不发送。</p>
+                        <p class="verification-help" id="welcome-flow">欢迎语关闭时不发送。</p>
                     </section>
                     <section class="panel verification-runtime">
-                        <h3>执行服务待接入</h3>
-                        <p class="verification-help">当前支持保存验证配置。接入 Telegram 入群事件处理后，才会执行验证；开启设置不代表机器人已开始验证成员。</p>
+                        <h3>入群处理说明</h3>
+                        <p class="verification-help">开启验证后，收到入群事件时先限制新成员发送文字、图片等消息，再发送验证题目；通过后恢复群组默认权限。超时及答错按左侧设置处理，处理失败不会直接放行。关闭验证后解除待验证成员的限制。</p>
                     </section>
                 </aside>
             </div>

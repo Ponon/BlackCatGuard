@@ -114,3 +114,34 @@
 .account-field + .account-field {
     margin-top: 20px;
 }
+
+/* 系统推送独立表单与多选事件 */
+.push-settings {
+    padding: 24px;
+}
+
+.push-event-fieldset {
+    margin: 20px 0 0;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+}
+
+.push-events {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 20px;
+}
+
+.push-event {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.push-event input {
+    margin: 0;
+    accent-color: #25292d;
+}

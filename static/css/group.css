@@ -191,36 +191,3 @@
     opacity: 0.5;
     cursor: not-allowed;
 }
-
-/* Token 输入框与独立的 SVG 显隐按钮。 */
-.token-field {
-    position: relative;
-}
-
-.token-input {
-    padding-right: 48px;
-}
-
-.token-toggle {
-    position: absolute;
-    top: 0;
-    right: 4px;
-    bottom: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    padding: 0;
-    border: 0;
-    border-radius: 6px;
-    background: transparent;
-}
-
-.token-toggle img {
-    width: 20px;
-    height: 20px;
-}
-
-.token-toggle:hover {
-    background: #edf0f4;
-}

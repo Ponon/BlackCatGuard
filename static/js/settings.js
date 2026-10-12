@@ -3,6 +3,7 @@ const settingsForm = document.querySelector('#settings-form');
 const settingsButton = document.querySelector('#save-settings');
 const proxyInput = document.querySelector('#proxy-url');
 let savingSettings = false;
+const networkState = trackFormState(settingsForm, document.querySelector('#settings-save-state'));
 
 settingsForm.addEventListener('submit', async event => {
     event.preventDefault();
@@ -28,10 +29,11 @@ settingsForm.addEventListener('submit', async event => {
             return;
         }
         proxyInput.value = result.proxy_url;
+        networkState.markSaved();
         document.querySelector('#network-mode').textContent = result.proxy_url ? '指定代理' : '默认网络';
         showError(result.message, true);
     } catch {
-        showError('请求失败，请检查网络后重试。');
+        showError('网络请求失败请稍后重试');
     } finally {
         savingSettings = false;
         settingsButton.disabled = false;
@@ -101,7 +103,7 @@ accountForm.addEventListener('submit', async event => {
         }
         window.location.replace(result.redirect);
     } catch {
-        showError('请求失败，请检查网络后重试。');
+        showError('网络请求失败请稍后重试');
     } finally {
         savingAccount = false;
         accountButton.disabled = false;
@@ -109,4 +111,70 @@ accountForm.addEventListener('submit', async event => {
         accountForm.setAttribute('aria-busy', 'false');
         accountForm.querySelectorAll('.settings-input').forEach(input => { input.readOnly = false; });
     }
+});
+
+// 推送配置独立保存 测试不要求启用也不改变事件选择
+const pushForm = document.querySelector('#push-form');
+const pushState = trackFormState(pushForm, document.querySelector('#push-save-state'));
+let pushBusy = false;
+
+async function submitPush(test = false) {
+    if (pushBusy) return;
+    const data = new FormData(pushForm);
+    if (test) {
+        data.delete('provider');
+        data.delete('bark_url');
+        data.delete('events');
+    }
+    pushBusy = true;
+    pushForm.setAttribute('aria-busy', 'true');
+    const controls = Array.from(pushForm.elements);
+    controls.forEach(control => { control.disabled = true; });
+    const button = test ? document.querySelector('#test-push') : pushForm.querySelector('[type="submit"]');
+    const text = button.textContent;
+    button.textContent = test ? '测试中…' : '保存中…';
+    try {
+        const response = await fetch(test ? '/settings/push/test' : pushForm.action, {
+            method: 'POST', body: data, credentials: 'same-origin', headers: { Accept: 'application/json' },
+        });
+        if (response.status === 401) {
+            window.location.replace('/login');
+            return;
+        }
+        const result = await response.json();
+        if (!response.ok) {
+            showError(typeof result.detail === 'string' ? result.detail : '推送操作失败');
+            return;
+        }
+        if (!test) {
+            pushForm.elements.provider.value = result.provider;
+            pushForm.elements.bark_url.value = result.bark_url;
+            pushForm.querySelectorAll('[name="events"]').forEach(input => { input.checked = result.events.includes(input.value); });
+            pushState.markSaved();
+        }
+        showError(result.message, true);
+    } catch {
+        showError('网络请求失败请稍后重试');
+    } finally {
+        pushBusy = false;
+        controls.forEach(control => { control.disabled = false; });
+        button.textContent = text;
+        pushForm.setAttribute('aria-busy', 'false');
+    }
+}
+
+pushForm.addEventListener('submit', event => {
+    event.preventDefault();
+    submitPush();
+});
+document.querySelector('#test-push').addEventListener('click', () => submitPush(true));
+document.querySelector('#toggle-bark-url').addEventListener('click', event => {
+    const input = pushForm.elements.bark_url;
+    const visible = input.type === 'password';
+    input.type = visible ? 'text' : 'password';
+    const button = event.currentTarget;
+    button.setAttribute('aria-pressed', String(visible));
+    button.setAttribute('aria-label', visible ? '隐藏推送地址' : '显示推送地址');
+    const icon = document.querySelector('#bark-eye');
+    icon.src = visible ? icon.dataset.hide : icon.dataset.show;
 });

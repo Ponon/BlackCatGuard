@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{{ page_title }}</title>
+        <link rel="icon" type="image/svg+xml" href="{{ url_for('static', path='/images/logo.svg') }}">
+        <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}?v=7">
+        <link rel="stylesheet" href="{{ url_for('static', path='/css/broadcast.css') }}">
+        <link rel="stylesheet" href="{{ url_for('static', path='/css/toast.css') }}">
+        <script src="{{ url_for('static', path='/js/toast.js') }}" defer></script>
+        <script src="{{ url_for('static', path='/js/dashboard.js') }}" defer></script>
+        <script src="{{ url_for('static', path='/js/form-state.js') }}" defer></script>
+        <script src="{{ url_for('static', path='/js/broadcast.js') }}" defer></script>
+    </head>
+    <body>
+        {% include 'partials/header.html' %}
+        <section class="page-heading">
+            <div>
+                <div class="title-line">
+                    <h1>群广播</h1>
+                    <span class="badge">BROADCAST</span>
+                </div>
+                <p>维护广播内容，再为内容设置独立的循环发送任务。</p>
+            </div>
+            <a class="button" href="/group">群组配置</a>
+        </section>
+        <main class="dashboard">
+            <div class="broadcast-layout">
+                <div>
+                    <section class="panel broadcast-card">
+                        <div class="broadcast-heading">
+                            <div>
+                                <h2>广播内容</h2>
+                                <p class="broadcast-help">保存多条内容供循环任务选择；修改内容后，绑定它的任务使用更新后的内容。</p>
+                            </div>
+                            <button class="button button--compact" id="new-broadcast-content" type="button">新建内容</button>
+                        </div>
+                        <form id="broadcast-content-form" action="/broadcast/content" method="post" novalidate data-saved="false">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <input type="hidden" name="content_id" value="0">
+                            <input type="hidden" name="buttons" value="[]">
+                            <div class="broadcast-field">
+                                <label class="broadcast-label" for="broadcast-content-name">内容名称</label>
+                                <input class="broadcast-input" id="broadcast-content-name" name="name" maxlength="64" placeholder="例如：群公告、活动提醒">
+                            </div>
+                            <div class="broadcast-field">
+                                <label class="broadcast-label" for="broadcast-message">消息正文</label>
+                                <textarea class="broadcast-input" id="broadcast-message" name="message" rows="6" maxlength="4096" placeholder="请输入广播内容"></textarea>
+                                <div class="broadcast-variable">
+                                    <button class="button button--compact" id="insert-datetime" type="button">插入发送时间</button>
+                                    <p class="broadcast-help">{% raw %}{datetime}{% endraw %} 为每次发送时的北京时间，按纯文本发送。</p>
+                                </div>
+                            </div>
+                            <div class="broadcast-field">
+                                <div class="broadcast-heading">
+                                    <h3>链接按钮</h3>
+                                    <button class="button button--compact" id="add-broadcast-button" type="button">添加按钮</button>
+                                </div>
+                                <p class="broadcast-help">相同行号放在同一行；最多 24 个按钮，每行最多 8 个。</p>
+                                <div id="broadcast-button-editor" class="broadcast-button-editor"></div>
+                                <p class="broadcast-help" id="broadcast-buttons-empty">仅发送消息正文。</p>
+                            </div>
+                            <div class="broadcast-actions">
+                                <button class="button button--primary" type="submit">保存内容</button>
+                                <span class="broadcast-help" id="broadcast-content-state">尚未保存</span>
+                            </div>
+                        </form>
+                    </section>
+                    <section class="panel broadcast-card broadcast-task-card">
+                        <form id="broadcast-task-form" action="/broadcast/task" method="post" novalidate data-saved="false" data-group-configured="{{ 'true' if group_configured else 'false' }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <input type="hidden" name="task_id" value="0">
+                            <input type="hidden" name="times" value="09:00">
+                            <div class="broadcast-heading">
+                                <div>
+                                    <h2>循环广播</h2>
+                                    <p class="broadcast-help">新增或编辑发送规则，启用与关闭在右侧任务列表操作。</p>
+                                </div>
+                            </div>
+                            <div class="broadcast-field">
+                                <label class="broadcast-label" for="broadcast-task-content">绑定广播内容</label>
+                                <select class="broadcast-input" id="broadcast-task-content" name="content_id"></select>
+                                <p class="broadcast-help">先在上方保存内容，再为任务选择内容；关闭任务不会删除内容。</p>
+                            </div>
+                            <div class="broadcast-field">
+                                <label class="broadcast-label" for="broadcast-schedule">循环方式</label>
+                                <select class="broadcast-input" id="broadcast-schedule" name="schedule_mode">
+                                    <option value="daily">每天定时</option>
+                                    <option value="interval">按间隔循环</option>
+                                </select>
+                            </div>
+                            <div class="broadcast-field" id="broadcast-interval" hidden>
+                                <label class="broadcast-label" for="broadcast-minutes">发送间隔（分钟）</label>
+                                <input class="broadcast-input" id="broadcast-minutes" name="interval_minutes" type="number" min="1" max="43200" step="1" value="60">
+                            </div>
+                            <div class="broadcast-field" id="broadcast-time">
+                                <div class="broadcast-heading">
+                                    <h3>发送时间（北京时间）</h3>
+                                    <button class="button button--compact" id="add-broadcast-time" type="button">添加时间</button>
+                                </div>
+                                <div class="broadcast-time-editor" id="broadcast-time-editor"></div>
+                                <p class="broadcast-help">可设置多个时间，如 01:00、02:00，表示当天各发一次；重复时间自动合并。</p>
+                            </div>
+                            <div class="broadcast-actions">
+                                <button class="button button--primary" type="submit">保存循环任务</button>
+                                <button class="button" id="new-broadcast-task" type="button">新建任务</button>
+                                <span class="broadcast-help" id="broadcast-task-state">尚未保存</span>
+                            </div>
+                        </form>
+                    </section>
+                    {% include 'partials/footer.html' %}
+                </div>
+                <aside class="sidebar">
+                    <section class="panel broadcast-card">
+                        <div class="broadcast-heading">
+                            <h2>内容预览</h2>
+                            <span class="small-badge">示意</span>
+                        </div>
+                        <p class="broadcast-help">预览当前编辑内容，不会向群里发送消息。</p>
+                        <div class="broadcast-preview-message" id="broadcast-preview-message"></div>
+                        <div class="broadcast-preview-buttons" id="broadcast-preview-buttons"></div>
+                    </section>
+                    <section class="panel broadcast-card">
+                        <h2>已保存内容</h2>
+                        <p class="broadcast-help">点击编辑，在左侧修改内容；删除前需先解除任务绑定。</p>
+                        <div class="broadcast-list" id="broadcast-content-list"></div>
+                    </section>
+                    <section class="panel broadcast-card">
+                        <h2>已保存任务</h2>
+                        <div class="broadcast-list" id="broadcast-task-list"></div>
+                    </section>
+                </aside>
+            </div>
+        </main>
+        <dialog class="broadcast-dialog" id="broadcast-delete-dialog" aria-labelledby="broadcast-delete-title">
+            <h2 id="broadcast-delete-title">确认删除？</h2>
+            <p class="broadcast-help" id="broadcast-delete-description"></p>
+            <div class="broadcast-dialog-actions">
+                <button class="button" id="broadcast-cancel-delete" type="button" autofocus>取消</button>
+                <button class="button button--primary" id="broadcast-confirm-delete" type="button">确认删除</button>
+            </div>
+        </dialog>
+        <script id="broadcast-data" type="application/json">{{ {'contents': contents, 'tasks': tasks}|tojson }}</script>
+    </body>
+</html>

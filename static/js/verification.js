@@ -3,7 +3,7 @@ const verificationForm = document.querySelector('#verification-form');
 const welcomeForm = document.querySelector('#welcome-form');
 
 function updateVerificationPreview() {
-    document.querySelector('#verification-status').textContent = verificationForm.elements.enabled.checked ? '已选择启用' : '已关闭';
+    updateWelcomeFlow();
     const arithmetic = verificationForm.elements.method.value === 'arithmetic';
     document.querySelector('#preview-question').hidden = !arithmetic;
     const answers = document.querySelector('#preview-answers');
@@ -17,9 +17,20 @@ function updateVerificationPreview() {
 }
 
 function updateWelcomePreview() {
-    document.querySelector('#welcome-status').textContent = welcomeForm.elements.enabled.checked ? '已选择启用' : '已关闭';
+    updateWelcomeFlow();
     document.querySelector('#preview-welcome').textContent = welcomeForm.elements.welcome_message.value
         .replace(/\{nickname\}/g, '小黑').replace(/\{username\}/g, '@blackcat');
+}
+
+function updateWelcomeFlow() {
+    const flow = document.querySelector('#welcome-flow');
+    if (!welcomeForm.elements.enabled.checked) {
+        flow.textContent = '按当前选择预览：欢迎语已关闭，不发送欢迎语。';
+    } else if (verificationForm.elements.enabled.checked) {
+        flow.textContent = '按当前选择预览：验证通过 → 删除验证消息 → 发送欢迎语。';
+    } else {
+        flow.textContent = '按当前选择预览：新成员入群后直接发送欢迎语。';
+    }
 }
 
 // 变量只插入欢迎语，昵称和用户名以普通文本展示。
@@ -33,7 +44,7 @@ welcomeForm.querySelectorAll('[data-variable]').forEach(button => {
         }
         textarea.setRangeText(text, textarea.selectionStart, textarea.selectionEnd, 'end');
         textarea.focus();
-        document.querySelector('#welcome-save-state').textContent = '有未保存修改';
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
         updateWelcomePreview();
     });
 });
@@ -42,17 +53,18 @@ function bindSettingsForm(form, buttonId, stateId, updatePreview, validate) {
     const button = document.querySelector(buttonId);
     const state = document.querySelector(stateId);
     let saving = false;
+    const formState = trackFormState(form, state);
     // 开关可点击以显示引导，但无群配置时立即恢复关闭状态。
     form.elements.enabled.addEventListener('change', () => {
         if (form.elements.enabled.checked && form.dataset.groupConfigured !== 'true') {
             form.elements.enabled.checked = false;
-            showError('请先在群管理中配置机器人 Token 和群 ID。');
+            showError('请先完成群管理配置');
+            formState.refresh();
             updatePreview();
         }
     });
     for (const event of ['input', 'change']) {
         form.addEventListener(event, () => {
-            state.textContent = '有未保存修改';
             updatePreview();
         });
     }
@@ -60,7 +72,7 @@ function bindSettingsForm(form, buttonId, stateId, updatePreview, validate) {
         event.preventDefault();
         if (saving || !validate()) return;
         if (form.elements.enabled.checked && form.dataset.groupConfigured !== 'true') {
-            showError('请先在群管理中配置机器人 Token 和群 ID。');
+            showError('请先完成群管理配置');
             return;
         }
         const data = new FormData(form);
@@ -69,7 +81,7 @@ function bindSettingsForm(form, buttonId, stateId, updatePreview, validate) {
         const label = button.textContent;
         button.textContent = '保存中…';
         form.setAttribute('aria-busy', 'true');
-        form.querySelectorAll('input, textarea, button').forEach(input => { input.disabled = true; });
+        form.querySelectorAll('input, textarea, select, button').forEach(input => { input.disabled = true; });
         try {
             const response = await fetch(form.action, {
                 method: 'POST', body: data, credentials: 'same-origin',
@@ -82,24 +94,33 @@ function bindSettingsForm(form, buttonId, stateId, updatePreview, validate) {
             const result = await response.json();
             if (!response.ok) {
                 if (response.status === 409) {
-                    form.dataset.groupConfigured = 'false';
-                    form.elements.enabled.checked = false;
+                    resetGroupDependentForms();
                     updatePreview();
                 }
                 showError(typeof result.detail === 'string' ? result.detail : '保存失败，请检查设置。');
                 return;
             }
-            state.textContent = '已保存';
+            form.elements.enabled.checked = result.enabled;
+            if (result.method) form.elements.method.value = result.method;
+            if (result.timeout_seconds !== undefined) form.elements.timeout_seconds.value = result.timeout_seconds;
+            if (result.welcome_message !== undefined) form.elements.welcome_message.value = result.welcome_message;
+            if (result.delete_after_seconds !== undefined) form.elements.delete_after_seconds.value = result.delete_after_seconds;
+            for (const name of ['timeout_action', 'wrong_action']) {
+                if (result[name] !== undefined) form.elements[name].value = result[name];
+            }
+            formState.markSaved();
+            updatePreview();
             showError(result.message, true);
         } catch {
-            showError('请求失败，请检查网络后重试。');
+            showError('网络请求失败请稍后重试');
         } finally {
             saving = false;
             button.textContent = label;
             form.setAttribute('aria-busy', 'false');
-            form.querySelectorAll('input, textarea, button').forEach(input => { input.disabled = false; });
+            form.querySelectorAll('input, textarea, select, button').forEach(input => { input.disabled = false; });
         }
     });
+    form.addEventListener('group-unavailable', updatePreview);
     updatePreview();
 }
 

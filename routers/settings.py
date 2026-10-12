@@ -1,12 +1,17 @@
 """系统设置：保存后对新发起的外部请求立即生效。"""
 import re
+import secrets
+from typing import Annotated
 from urllib.parse import urlsplit
 from tortoise.exceptions import IntegrityError
 
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
 
-from dao.models import Administrator, SystemSettings
+from dao.models import Administrator, SystemSettings, PushSettings
+from starlette.concurrency import run_in_threadpool
+from services.notifications import EVENT_OPTIONS, send_bark, PushError
+from services.network import get_proxy_url
 from routers.group import require_admin, require_csrf
 from utils.security import get_csrf_token, hash_password, verify_password
 from utils.views import templates
@@ -33,7 +38,7 @@ def validate_proxy(value: str) -> str:
     except ValueError:
         valid = False
     if not valid:
-        raise HTTPException(status_code=400, detail="请输入完整的 HTTP/HTTPS 代理地址，例如 http://127.0.0.1:7897。")
+        raise HTTPException(status_code=400, detail="请输入完整有效的代理地址")
     return value
 
 
@@ -45,12 +50,17 @@ async def settings_page(request: Request):
     if admin is None:
         return RedirectResponse('/login', status_code=303)
     settings = await SystemSettings.get_or_none(id=1)
+    push = await PushSettings.get_or_none(id=1)
     return templates.TemplateResponse(
         request=request, name='settings.html',
         context={
             'page_title': '系统设置 · 黑猫群管', 'active_page': 'settings',
             'username': admin.username, 'csrf_token': get_csrf_token(request),
             'proxy_url': settings.proxy_url if settings else '',
+            'network_saved': settings is not None,
+            'push_saved': push is not None, 'push_provider': push.provider if push else '',
+            'bark_url': push.bark_url if push else '', 'push_events': push.events if push else [],
+            'push_event_options': EVENT_OPTIONS,
         },
         headers={'Cache-Control': 'no-store'},
     )
@@ -62,7 +72,57 @@ async def save_settings(request: Request, proxy_url: str = Form(''), csrf_token:
     require_csrf(request, csrf_token)
     proxy_url = validate_proxy(proxy_url)
     await SystemSettings.update_or_create(id=1, defaults={'proxy_url': proxy_url})
-    return {'message': '系统设置已保存，新连接将使用代理。' if proxy_url else '系统设置已保存，已恢复默认网络。', 'proxy_url': proxy_url}
+    return {'message': '代理设置已保存' if proxy_url else '已恢复默认网络', 'proxy_url': proxy_url}
+
+
+def validate_bark_url(value):
+    value = value.strip().rstrip('/')
+    if not value:
+        return ''
+    try:
+        parsed = urlsplit(value)
+        valid = parsed.scheme in ('http', 'https') and parsed.hostname and parsed.path.strip('/') and not (
+            parsed.username or parsed.password or parsed.query or parsed.fragment
+        ) and len(value) <= 2048 and not any(char.isspace() or ord(char) < 32 for char in value)
+        parsed.port
+    except ValueError:
+        valid = False
+    if not valid:
+        raise HTTPException(status_code=400, detail='请输入包含设备 Key 的完整 Bark 推送地址')
+    return value
+
+
+@router.post('/settings/push')
+async def save_push_settings(request: Request, provider: Annotated[str, Form()] = '',
+    bark_url: Annotated[str, Form()] = '', events: Annotated[list[str], Form()] = [], csrf_token: Annotated[str, Form()] = ''):
+    await require_admin(request)
+    require_csrf(request, csrf_token)
+    if provider not in ('', 'bark'):
+        raise HTTPException(status_code=400, detail='请选择有效的推送方式')
+    url = validate_bark_url(bark_url)
+    if any(value not in EVENT_OPTIONS for value in events):
+        raise HTTPException(status_code=400, detail='请选择有效的推送事件')
+    selected = list(dict.fromkeys(events))
+    if provider == 'bark' and (not url or not selected):
+        raise HTTPException(status_code=400, detail='请填写 Bark 地址并至少选择一个推送事件')
+    await PushSettings.update_or_create(id=1, defaults={
+        'provider': provider, 'bark_url': url, 'events': selected, 'revision': secrets.token_hex(16),
+    })
+    return {'message': '系统推送设置已保存', 'provider': provider, 'bark_url': url, 'events': selected}
+
+
+@router.post('/settings/push/test')
+async def test_push(request: Request, csrf_token: Annotated[str, Form()] = ''):
+    await require_admin(request)
+    require_csrf(request, csrf_token)
+    settings = await PushSettings.get_or_none(id=1)
+    if not settings or not settings.bark_url:
+        raise HTTPException(status_code=400, detail='请先保存 Bark 推送地址')
+    try:
+        await run_in_threadpool(send_bark, settings.bark_url, '黑猫群管 测试推送', '系统推送连接测试', await get_proxy_url())
+    except PushError as error:
+        raise HTTPException(status_code=502, detail=str(error)) from None
+    return {'message': 'Bark 推送服务已接收测试消息'}
 
 
 @router.post('/settings/account')

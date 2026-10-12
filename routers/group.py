@@ -7,7 +7,7 @@ from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from starlette.concurrency import run_in_threadpool
 
-from dao.models import Administrator, GroupConfig, VerificationSettings, WelcomeSettings, KeywordSettings, AISettings
+from dao.models import Administrator, GroupConfig, VerificationSettings, WelcomeSettings, KeywordSettings, AISettings, BroadcastSettings, BroadcastTask, BroadcastSchedule, JoinSession
 from services.telegram import inspect_group
 from services.network import get_proxy_url
 from utils.security import get_csrf_token, valid_csrf_token
@@ -44,7 +44,7 @@ async def group_page(request: Request):
             "username": admin.username,
             "active_page": "group",
             "csrf_token": get_csrf_token(request),
-            "configured": config is not None,
+            "configured": bool(config and config.bot_token and config.chat_id),
             "bot_token": config.bot_token if config else "",
             "chat_id": config.chat_id if config else "",
         },
@@ -67,18 +67,30 @@ async def save_config(request: Request, chat_id: str = Form(""), bot_token: str 
             await WelcomeSettings.filter(id=1).update(enabled=False)
             await KeywordSettings.filter(id=1).update(enabled=False)
             await AISettings.filter(id=1).update(enabled=False)
-        return {"message": "群配置已清除，入群功能与广告拦截已关闭。", "configured": False, "chat_id": "", "bot_token": ""}
+            await BroadcastSettings.filter(id=1).update(enabled=False)
+            await BroadcastTask.all().update(enabled=False)
+            await BroadcastSchedule.all().delete()
+            await JoinSession.all().exclude(state='done').update(state='done')
+        return {"message": "群配置已清除并关闭关联功能", "configured": False, "chat_id": "", "bot_token": ""}
     if not re.fullmatch(r"[0-9]{1,20}:[A-Za-z0-9_-]{20,200}", token):
         raise HTTPException(status_code=400, detail="请输入有效的 Bot Token。")
     if not re.fullmatch(r"-[1-9][0-9]{0,19}", chat_id):
-        raise HTTPException(status_code=400, detail="群 ID 应为负整数，例如 -1001234567890。")
-    await GroupConfig.update_or_create(id=1, defaults={
-        "bot_token": token, "chat_id": chat_id,
-        "revision": secrets.token_hex(16), "check_result": {},
-    })
+        raise HTTPException(status_code=400, detail="群 ID 必须是负整数")
+    async with in_transaction():
+        old = await GroupConfig.filter(id=1).select_for_update().first()
+        if old and (old.bot_token != token or old.chat_id != chat_id):
+            for model in (VerificationSettings, WelcomeSettings, KeywordSettings, AISettings, BroadcastSettings):
+                await model.filter(id=1).update(enabled=False)
+            await BroadcastTask.all().update(enabled=False)
+            await BroadcastSchedule.all().delete()
+            await JoinSession.all().exclude(state='done').update(state='done')
+        await GroupConfig.update_or_create(id=1, defaults={
+            "bot_token": token, "chat_id": chat_id,
+            "revision": old.revision if old and old.bot_token == token and old.chat_id == chat_id else secrets.token_hex(16), "check_result": {},
+        })
     # 保存接口直接执行一次检测，调用方不需要额外发起检测请求。
     result = await check_config(request, csrf_token)
-    return {"message": "配置已保存。" + result["message"], "configured": True,
+    return {"message": result["message"], "configured": True,
             "chat_id": chat_id, "bot_token": token, "check_result": result}
 
 

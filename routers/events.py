@@ -1,6 +1,4 @@
 """事件日志按最新时间分页，仅读取真实保存的事件。"""
-from zoneinfo import ZoneInfo
-
 from fastapi import APIRouter, Request, Form, HTTPException
 from fastapi.responses import RedirectResponse
 
@@ -8,6 +6,7 @@ from dao.models import Administrator, EventLog
 from routers.group import require_admin, require_csrf
 from utils.security import get_csrf_token
 from utils.views import templates
+from utils.dates import display_time
 
 router = APIRouter()
 PAGE_SIZES = (10, 20, 50, 100)
@@ -28,11 +27,8 @@ async def events_page(request: Request, page: int = 1, page_size: int = 10):
     records = await EventLog.all().order_by('-created_at', '-id').offset((page - 1) * page_size).limit(page_size)
     rows = []
     for record in records:
-        timestamp = record.created_at
-        if timestamp.tzinfo is None:
-            timestamp = timestamp.replace(tzinfo=ZoneInfo('Asia/Shanghai'))
         rows.append({
-            'time': timestamp.astimezone(ZoneInfo('Asia/Shanghai')).strftime('%Y-%m-%d %H:%M:%S'),
+            'time': display_time(record.created_at),
             'type': record.event_type, 'nickname': record.nickname,
             'username': record.username, 'content': record.content, 'result': record.result,
         })

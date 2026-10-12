@@ -1,4 +1,4 @@
-"""成员入群与验证成功后的顺序规则，供 Telegram 事件处理器接入。"""
+"""成员入群与验证成功后的执行顺序约定。"""
 
 
 def join_actions(verification_enabled: bool, welcome_enabled: bool) -> tuple[str, ...]:

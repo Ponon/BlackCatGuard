@@ -62,7 +62,7 @@ document.querySelectorAll('form.setup_input').forEach(form => {
 			showError(data.error || (typeof data.detail === 'string' ?
 				data.detail : '提交失败，请检查输入后重试。'));
 		} catch {
-			showError('请求失败，请检查网络后重试。');
+			showError('网络请求失败请稍后重试');
 		} finally {
 			submitting = false;
 			button.disabled = false;

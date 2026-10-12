@@ -5,8 +5,8 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>{{ page_title }}</title>
         <link rel="icon" type="image/svg+xml" href="{{ url_for('static', path='/images/logo.svg') }}">
-        <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}?v=7">
-        <link rel="stylesheet" href="{{ url_for('static', path='/css/group.css') }}?v=7">
+        <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}?v=8">
+        <link rel="stylesheet" href="{{ url_for('static', path='/css/group.css') }}?v=8">
         <link rel="stylesheet" href="{{ url_for('static', path='/css/toast.css') }}">
         <script src="{{ url_for('static', path='/js/toast.js') }}?v=30261012-4" defer></script>
         <script src="{{ url_for('static', path='/js/dashboard.js') }}" defer></script>
@@ -49,10 +49,10 @@
                                     </div>
                                 </div>
                                 <label class="field-label" for="bot-token">Bot Token</label>
-                                <div class="token-field">
-                                    <input class="config-input token-input" id="bot-token" name="bot_token" type="password" value="{{ bot_token }}" maxlength="256" autocomplete="new-password" spellcheck="false" placeholder="请输入 BotFather 提供的 Token">
-                                    <button class="token-toggle" id="toggle-token" type="button" aria-label="显示 Token" aria-controls="bot-token" aria-pressed="false">
-                                        <img id="token-eye" src="{{ url_for('static', path='/images/eye.svg') }}" data-show="{{ url_for('static', path='/images/eye.svg') }}" data-hide="{{ url_for('static', path='/images/eye-off.svg') }}" alt="">
+                                <div class="secret-field">
+                                    <input class="config-input" id="bot-token" name="bot_token" type="password" value="{{ bot_token }}" maxlength="256" autocomplete="new-password" spellcheck="false" placeholder="请输入 BotFather 提供的 Token">
+                                    <button class="button" id="toggle-token" type="button" aria-label="显示 Token" aria-controls="bot-token" aria-pressed="false">
+                                        <img class="icon" id="token-eye" src="{{ url_for('static', path='/images/eye.svg') }}" data-show="{{ url_for('static', path='/images/eye.svg') }}" data-hide="{{ url_for('static', path='/images/eye-off.svg') }}" alt="">
                                     </button>
                                 </div>
                                 <p class="field-help">默认隐藏 Token，点击右侧眼睛查看或检查。<a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer">打开 BotFather</a></p>
@@ -73,7 +73,7 @@
                             </div>
                             <div class="config-actions">
                                 <button class="button button--primary" type="submit" id="save-config">保存配置</button>
-                                <span class="field-help">保存后自动检测；清空两项将关闭入群功能。</span>
+                                <span class="field-help">保存后自动检测；清空两项将关闭入群功能、广告拦截与群广播。</span>
                             </div>
                         </form>
                     </section>

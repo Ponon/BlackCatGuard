@@ -5,11 +5,12 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>{{ page_title }}</title>
         <link rel="icon" type="image/svg+xml" href="{{ url_for('static', path='/images/logo.svg') }}">
-        <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}?v=7">
+        <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}?v=8">
         <link rel="stylesheet" href="{{ url_for('static', path='/css/settings.css') }}?v=2">
         <link rel="stylesheet" href="{{ url_for('static', path='/css/toast.css') }}">
         <script src="{{ url_for('static', path='/js/toast.js') }}?v=20261012-4" defer></script>
         <script src="{{ url_for('static', path='/js/dashboard.js') }}" defer></script>
+        <script src="{{ url_for('static', path='/js/form-state.js') }}" defer></script>
         <script src="{{ url_for('static', path='/js/settings.js') }}?v=2" defer></script>
     </head>
     <body>
@@ -35,17 +36,64 @@
                         </div>
                         <span class="small-badge" id="network-mode">{{ '指定代理' if proxy_url else '默认网络' }}</span>
                     </div>
-                    <form class="settings-form" id="settings-form" action="/settings" method="post" novalidate>
+                    <form class="settings-form" id="settings-form" data-saved="{{ 'true' if network_saved else 'false' }}" action="/settings" method="post" novalidate>
                         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                         <label class="settings-label" for="proxy-url">代理地址</label>
                         <input class="settings-input" id="proxy-url" name="proxy_url" type="text" maxlength="2048" value="{{ proxy_url }}" placeholder="选填，留空使用默认网络" autocomplete="off" spellcheck="false" aria-describedby="proxy-help">
                         <p class="settings-help" id="proxy-help">支持 HTTP / HTTPS 代理。填写后，后台外部连接统一使用该代理；留空则使用默认网络设置。</p>
                         <div class="settings-actions">
                             <button class="button button--primary" type="submit" id="save-settings">保存设置</button>
+                            <span class="settings-help" id="settings-save-state">{{ '已保存' if network_saved else '尚未保存' }}</span>
                             <span class="settings-help">保存后立即生效，无需重启。</span>
                         </div>
                     </form>
                 </section>
+                    <section class="panel push-settings">
+                        <div class="section-heading">
+                            <div>
+                                <h2>系统推送</h2>
+                                <p>选择推送方式与事件 将运行结果发送到你的设备</p>
+                            </div>
+                        </div>
+                        <form class="settings-form" id="push-form" action="/settings/push" method="post" novalidate data-saved="{{ 'true' if push_saved else 'false' }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <div class="account-field">
+                                <label class="settings-label" for="push-provider">推送方式</label>
+                                <select class="settings-input" id="push-provider" name="provider">
+                                    <option value=""{% if not push_provider %} selected{% endif %}>关闭推送</option>
+                                    <option value="bark"{% if push_provider == 'bark' %} selected{% endif %}>Bark</option>
+                                </select>
+                            </div>
+                            <div class="account-field">
+                                <label class="settings-label" for="bark-url">Bark 推送地址</label>
+                                <div class="secret-field">
+                                    <input class="settings-input" id="bark-url" name="bark_url" type="password" value="{{ bark_url }}" maxlength="2048" placeholder="https://api.day.app/你的设备Key" autocomplete="off" spellcheck="false">
+                                    <button class="button" id="toggle-bark-url" type="button" aria-label="显示推送地址" aria-controls="bark-url" aria-pressed="false">
+                                        <img class="icon" id="bark-eye" src="{{ url_for('static', path='/images/eye.svg') }}" data-show="{{ url_for('static', path='/images/eye.svg') }}" data-hide="{{ url_for('static', path='/images/eye-off.svg') }}" alt="">
+                                    </button>
+                                </div>
+                                <p class="settings-help">填写 Bark 应用中的服务器地址和设备 Key 不包含示例推送正文 支持自建服务器</p>
+                            </div>
+                            <fieldset class="push-event-fieldset">
+                                <legend class="settings-label">推送事件</legend>
+                                <div class="push-events">
+                                    {% for value, label in push_event_options.items() %}
+                                    <label class="push-event" for="push-event-{{ value }}">
+                                        <input id="push-event-{{ value }}" type="checkbox" name="events" value="{{ value }}"{% if value in push_events %} checked{% endif %}>
+                                        <span>{{ label }}</span>
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                                <p class="settings-help">只推送保存后新发生的所选事件 使用系统代理 推送失败不影响群功能</p>
+                            </fieldset>
+                            <div class="settings-actions">
+                                <button class="button button--primary" type="submit">保存推送设置</button>
+                                <button class="button" id="test-push" type="button">测试推送</button>
+                                <span class="settings-help" id="push-save-state">{{ '已保存' if push_saved else '尚未保存' }}</span>
+                            </div>
+                            <p class="settings-help">测试使用已保存地址 无需开启推送</p>
+                        </form>
+                    </section>
                     <section class="panel account-settings">
                         <div class="section-heading">
                             <div>

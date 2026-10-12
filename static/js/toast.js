@@ -1,10 +1,25 @@
 // 提示内容只保存在当前页面中，刷新不会再次显示旧错误。
+function formatToastMessage(message) {
+    // 只处理提示展示，保留接口地址与用户名等数据本身的有效字符。
+    return String(message ?? '')
+        .replace(/(\d)[～~](\d)/g, '$1 至 $2')
+        .replace(/[，。！？；：、【】（）“”‘’「」『』]/g, '')
+        .replace(/[,.!?;:]+$/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+// 服务端直接渲染的提示也采用相同格式。
+document.querySelectorAll('.error_toast').forEach(toast => {
+    toast.textContent = formatToastMessage(toast.textContent);
+});
+
 function showError(message, success = false) {
 	document.querySelectorAll('.error_toast').forEach(item => item.remove());
 	const toast = document.createElement('div');
 	toast.className = success ? 'error_toast success_toast' : 'error_toast';
 	toast.setAttribute('role', success ? 'status' : 'alert');
-	toast.textContent = message;
+	toast.textContent = formatToastMessage(message);
 	toast.addEventListener('animationend', () => toast.remove(), {
 		once: true
 	});
