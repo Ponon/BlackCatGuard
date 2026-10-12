@@ -36,17 +36,22 @@ def hash_password(password: str) -> str:
     return f"scrypt${salt.hex()}${digest.hex()}"
 
 
+# 用保存的盐重新计算密码哈希，验证登录密码。
 def verify_password(password: str, password_hash: str) -> bool:
     try:
+        # 数据库保存格式：算法名称$盐$密码哈希。
         algorithm, salt, expected = password_hash.split("$")
         if algorithm != "scrypt":
             return False
+        # 使用与创建管理员时相同的算法和参数。
         digest = hashlib.scrypt(
             password.encode("utf-8"), salt=bytes.fromhex(salt),
             n=16384, r=8, p=1,
         )
+        # 使用恒定时间比较，避免普通字符串比较泄露哈希差异。
         return secrets.compare_digest(digest, bytes.fromhex(expected))
     except (ValueError, TypeError):
+        # 哈希格式异常时按验证失败处理。
         return False
 
 

@@ -3,7 +3,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from dao.database import init_db, close_db
-from routers import auth, pages
+from routers import auth, pages, group, settings, verification
 from utils.views import BASE_DIR
 from starlette.middleware.sessions import SessionMiddleware
 from utils.security import load_session_secret
@@ -51,6 +51,9 @@ app.mount(
 # 挂载路由
 app.include_router(pages.router)
 app.include_router(auth.router)
+app.include_router(group.router)
+app.include_router(settings.router)
+app.include_router(verification.router)
 
 
 # 主程序

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{{ page_title }}</title>
+        <link rel="icon" type="image/svg+xml" href="{{ url_for('static', path='/images/logo.svg') }}">
+        <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}?v=7">
+        <link rel="stylesheet" href="{{ url_for('static', path='/css/settings.css') }}?v=2">
+        <link rel="stylesheet" href="{{ url_for('static', path='/css/toast.css') }}">
+        <script src="{{ url_for('static', path='/js/toast.js') }}?v=20261012-4" defer></script>
+        <script src="{{ url_for('static', path='/js/dashboard.js') }}" defer></script>
+        <script src="{{ url_for('static', path='/js/settings.js') }}?v=2" defer></script>
+    </head>
+    <body>
+        {% include 'partials/header.html' %}
+        <section class="page-heading">
+            <div>
+                <div class="title-line">
+                    <h1>系统设置</h1>
+                    <span class="badge">SYSTEM</span>
+                </div>
+                <p>配置后台的网络连接，让机器人稳定运行。</p>
+            </div>
+            <a class="button" href="/">返回工作台</a>
+        </section>
+        <main class="dashboard">
+            <div class="settings-layout">
+                <div class="settings-main">
+                <section class="panel network-settings">
+                    <div class="section-heading">
+                        <div>
+                            <h2>网络设置</h2>
+                            <p>统一管理后台访问外部服务时使用的代理。</p>
+                        </div>
+                        <span class="small-badge" id="network-mode">{{ '指定代理' if proxy_url else '默认网络' }}</span>
+                    </div>
+                    <form class="settings-form" id="settings-form" action="/settings" method="post" novalidate>
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <label class="settings-label" for="proxy-url">代理地址</label>
+                        <input class="settings-input" id="proxy-url" name="proxy_url" type="text" maxlength="2048" value="{{ proxy_url }}" placeholder="选填，留空使用默认网络" autocomplete="off" spellcheck="false" aria-describedby="proxy-help">
+                        <p class="settings-help" id="proxy-help">支持 HTTP / HTTPS 代理。填写后，后台外部连接统一使用该代理；留空则使用默认网络设置。</p>
+                        <div class="settings-actions">
+                            <button class="button button--primary" type="submit" id="save-settings">保存设置</button>
+                            <span class="settings-help">保存后立即生效，无需重启。</span>
+                        </div>
+                    </form>
+                </section>
+                    <section class="panel account-settings">
+                        <div class="section-heading">
+                            <div>
+                                <h2>管理员账号</h2>
+                                <p>修改用户名或密码，保存后需重新登录。</p>
+                            </div>
+                        </div>
+                        <form class="settings-form" id="account-form" action="/settings/account" method="post" novalidate>
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <div class="account-field">
+                                <label class="settings-label" for="account-username">用户名</label>
+                                <input class="settings-input" id="account-username" name="username" value="{{ username }}" autocomplete="username" maxlength="32" required>
+                                <p class="settings-help">3～32 位字母、数字或下划线。</p>
+                            </div>
+                            <div class="account-field">
+                                <label class="settings-label" for="current-password">当前密码</label>
+                                <input class="settings-input" id="current-password" name="current_password" type="password" autocomplete="current-password" required>
+                                <p class="settings-help">修改账号信息需验证当前密码。</p>
+                            </div>
+                            <div class="account-field">
+                                <label class="settings-label" for="new-password">新密码</label>
+                                <input class="settings-input" id="new-password" name="new_password" type="password" autocomplete="new-password" maxlength="128">
+                                <p class="settings-help">8～128 位；留空则保留原密码。</p>
+                            </div>
+                            <div class="account-field">
+                                <label class="settings-label" for="confirm-password">确认新密码</label>
+                                <input class="settings-input" id="confirm-password" name="confirm_password" type="password" autocomplete="new-password" maxlength="128">
+                            </div>
+                            <div class="settings-actions">
+                                <button class="button button--primary" type="submit" id="save-account">保存账号信息</button>
+                            </div>
+                        </form>
+                    </section>
+                </div>
+                <aside class="sidebar">
+                    <section class="panel settings-note">
+                        <div class="settings-note-heading">
+                            <img class="icon" src="{{ url_for('static', path='/images/info.svg') }}" alt="">
+                            <h3>如何填写？</h3>
+                        </div>
+                        <p>没有可用代理时请留空。需要代理时，请填写你自己的完整地址，格式如下：</p>
+                        <code>http://代理服务器地址:端口</code>
+                        <p>以上仅为格式示意，并非已配置的地址。代理必须能从后台服务器访问；填写 127.0.0.1 时，指的是后台服务器本机。</p>
+                        <p>保存后，可前往群管理页检测机器人连接。</p>
+                        <a class="button button--full-width" href="/group">前往群管理</a>
+                    </section>
+                </aside>
+            </div>
+            {% include 'partials/footer.html' %}
+        </main>
+    </body>
+</html>

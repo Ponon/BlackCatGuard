@@ -1,20 +1,27 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 	<head>
+		<link rel="icon" type="image/svg+xml" href="{{ url_for('static', path='/images/logo.svg') }}">
 		<meta charset="UTF-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<title>{{ page_title }}</title>
-		<link rel="stylesheet" href="{{ url_for('static', path='/css/setup.css') }}">
+		<link rel="stylesheet" href="{{ url_for('static', path='/css/auth.css') }}">
+		<link rel="stylesheet" href="{{ url_for('static', path='/css/toast.css') }}">
+		<script src="{{ url_for('static', path='/js/toast.js') }}?v=20261012-4" defer></script>
+		<script src="{{ url_for('static', path='/js/auth.js') }}?v=20261012-4" defer></script>
 	</head>
 	<body>
+		{% if success %}
+		<div class="error_toast success_toast" role="status">{{ success }}</div>
+		{% endif %}
+		{% if error %}
+		<!-- 提示条固定在视口顶部，由 CSS 控制滑入和自动滑出。 -->
+		<div class="error_toast" role="alert">{{ error }}</div>
+		{% endif %}
 		<main class="container">
-			<img class="container_logo" src="{{ url_for('static', path='/images/logo.svg') }}"/>
-			<p class="container_title">登陆</p>
-			<p class="container_brief">请登录管理员账号。</p>
-
-			{% if error %}
-			<p role="alert">{{ error }}</p>
-			{% endif %}
+			<img class="container_logo" src="{{ url_for('static', path='/images/logo.svg') }}" />
+			<p class="container_title">欢迎使用黑猫群管</p>
+			<p class="container_brief">请输入您设置的管理员账号和密码完成登陆</p>
 
 			<form method="post" action="/login" class="setup_input">
 				<input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -27,14 +34,15 @@
 					</div>
 
 					<div class="setup_input_list_item">
-						<img src="{{ url_for('static', path='/images/username.svg') }}" alt="" />
-						<input id="password" type="password" name="password" placeholder="请输入密码" autocomplete="current-password"
-							minlength="8" maxlength="128" required>
+						<img src="{{ url_for('static', path='/images/password.svg') }}" alt="" />
+						<input id="password" type="password" name="password" placeholder="请输入密码"
+							autocomplete="current-password" minlength="8" maxlength="128" required>
 					</div>
 				</div>
 
 				<button type="submit" class="setup_input_btn">立即登录</button>
 			</form>
+
 		</main>
 	</body>
 </html>

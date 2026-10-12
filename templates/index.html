@@ -1,16 +1,219 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-	<head>
-		<meta charset="UTF-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<title>{{ page_title }}</title>
-
-		<link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
-	</head>
-	<body>
-		<main class="container">
-			<h1>{{ page_title }}</h1>
-			<p>网页框架已启动。</p>
-		</main>
-	</body>
+    <head>
+        <link rel="icon" type="image/svg+xml" href="{{ url_for('static', path='/images/logo.svg') }}">
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{{ page_title }}</title>
+        <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}?v=7">
+        <link rel="stylesheet" href="{{ url_for('static', path='/css/toast.css') }}">
+        <script src="{{ url_for('static', path='/js/toast.js') }}?v=20261012-4" defer></script>
+        <script src="{{ url_for('static', path='/js/dashboard.js') }}" defer></script>
+    </head>
+    <body>
+        {% if success %}
+            <div class="error_toast success_toast" role="status">
+                {{ success }}
+            </div>
+        {% endif %}
+        {% include 'partials/header.html' %}
+        <section class="page-heading">
+            <div>
+                <div class="title-line">
+                    <h1>工作台</h1>
+                    <span class="badge">TELEGRAM</span>
+                </div>
+                <p>一个机器人，一个群。让群管理更简单。</p>
+            </div>
+            <a class="button button--primary" href="/group">
+                <img class="button-icon" src="{{ url_for('static', path='/images/add.svg') }}" alt="" aria-hidden="true">
+                <span>配置机器人</span>
+            </a>
+        </section>
+        <main class="dashboard">
+            <!-- 尚未接入 Telegram，所有指标均显示真实的未配置状态。 -->
+            <section class="panel overview" aria-labelledby="overview-title">
+                <div class="section-heading">
+                    <div>
+                        <h2 id="overview-title">群组概览</h2>
+                        <p>你的机器人与群组运行状态。</p>
+                    </div>
+                    <div class="status">
+                        <img class="status-icon" src="{{ url_for('static', path='/images/status-idle.svg') }}" alt="" aria-hidden="true">
+                        <span>等待接入</span>
+                    </div>
+                </div>
+                <div class="stats">
+                    <article class="stat">
+                        <div class="stat-icon icon-background--blue">
+                            <img class="icon" src="{{ url_for('static', path='/images/robot.svg') }}" alt="" aria-hidden="true">
+                        </div>
+                        <span class="stat-label">机器人状态</span>
+                        <strong class="stat-value stat-value--text">未配置</strong>
+                        <span class="stat-note">连接你的 Telegram Bot</span>
+                    </article>
+                    <article class="stat">
+                        <div class="stat-icon icon-background--violet">
+                            <img class="icon" src="{{ url_for('static', path='/images/group.svg') }}" alt="" aria-hidden="true">
+                        </div>
+                        <span class="stat-label">目标群组</span>
+                        <strong class="stat-value stat-value--text">未绑定</strong>
+                        <span class="stat-note">绑定需要守护的群组</span>
+                    </article>
+                    <article class="stat">
+                        <div class="stat-icon icon-background--green">
+                            <img class="icon" src="{{ url_for('static', path='/images/add.svg') }}" alt="" aria-hidden="true">
+                        </div>
+                        <span class="stat-label">今日新增成员</span>
+                        <strong class="stat-value">—</strong>
+                        <span class="stat-note">接入后开始统计</span>
+                    </article>
+                    <article class="stat">
+                        <div class="stat-icon icon-background--orange">
+                            <img class="icon" src="{{ url_for('static', path='/images/verify.svg') }}" alt="" aria-hidden="true">
+                        </div>
+                        <span class="stat-label">今日拦截次数</span>
+                        <strong class="stat-value">—</strong>
+                        <span class="stat-note">接入后开始统计</span>
+                    </article>
+                </div>
+            </section>
+            <div class="content-grid">
+                <div class="main-column">
+                    <section class="panel features">
+                        <div class="section-heading">
+                            <div>
+                                <h2>群组防护</h2>
+                                <p>为你的群组建立秩序，让交流更安心。</p>
+                            </div>
+                            <span class="small-badge">4 项功能</span>
+                        </div>
+                        <div class="feature-list">
+                            <div class="feature-row">
+                                <div class="feature-icon icon-background--blue">
+                                    <img class="icon" src="{{ url_for('static', path='/images/verify.svg') }}" alt="" aria-hidden="true">
+                                </div>
+                                <div class="feature-copy">
+                                    <h3 class="feature-title">入群验证</h3>
+                                    <p class="feature-description">验证新成员身份，减少机器人与恶意账号</p>
+                                </div>
+                                <span class="muted-status">未启用</span>
+                                <a class="button button--compact" href="/verification">
+                                    <span>配置</span>
+                                    <img class="button-icon" src="{{ url_for('static', path='/images/arrow-up-right.svg') }}" alt="" aria-hidden="true">
+                                </a>
+                            </div>
+                            <div class="feature-row">
+                                <div class="feature-icon icon-background--orange">
+                                    <img class="icon" src="{{ url_for('static', path='/images/block.svg') }}" alt="" aria-hidden="true">
+                                </div>
+                                <div class="feature-copy">
+                                    <h3 class="feature-title">反垃圾消息</h3>
+                                    <p class="feature-description">拦截广告、恶意链接与重复消息</p>
+                                </div>
+                                <span class="muted-status">未启用</span>
+                                <button type="button" class="button button--compact" data-notice="请先配置机器人，反垃圾消息功能尚未接入。">
+                                    <span>配置</span>
+                                    <img class="button-icon" src="{{ url_for('static', path='/images/arrow-up-right.svg') }}" alt="" aria-hidden="true">
+                                </button>
+                            </div>
+                            <div class="feature-row">
+                                <div class="feature-icon icon-background--violet">
+                                    <img class="icon" src="{{ url_for('static', path='/images/welcome.svg') }}" alt="" aria-hidden="true">
+                                </div>
+                                <div class="feature-copy">
+                                    <h3 class="feature-title">欢迎消息</h3>
+                                    <p class="feature-description">用一条专属欢迎语，迎接每一位新成员</p>
+                                </div>
+                                <span class="muted-status">未启用</span>
+                                <button type="button" class="button button--compact" data-notice="请先配置机器人，欢迎消息功能尚未接入。">
+                                    <span>配置</span>
+                                    <img class="button-icon" src="{{ url_for('static', path='/images/arrow-up-right.svg') }}" alt="" aria-hidden="true">
+                                </button>
+                            </div>
+                            <div class="feature-row">
+                                <div class="feature-icon icon-background--green">
+                                    <img class="icon" src="{{ url_for('static', path='/images/rules.svg') }}" alt="" aria-hidden="true">
+                                </div>
+                                <div class="feature-copy">
+                                    <h3 class="feature-title">群组规则</h3>
+                                    <p class="feature-description">让新成员了解规则，共同维护群组秩序</p>
+                                </div>
+                                <span class="muted-status">未启用</span>
+                                <button type="button" class="button button--compact" data-notice="请先配置机器人，群组规则功能尚未接入。">
+                                    <span>配置</span>
+                                    <img class="button-icon" src="{{ url_for('static', path='/images/arrow-up-right.svg') }}" alt="" aria-hidden="true">
+                                </button>
+                            </div>
+                        </div>
+                        <div class="panel-foot">
+                            <img class="status-icon" src="{{ url_for('static', path='/images/status-idle.svg') }}" alt="" aria-hidden="true">
+                            完成机器人与群组配置后，即可开启群组防护。
+                        </div>
+                    </section>
+                    <section class="panel events" id="events">
+                        <div class="section-heading">
+                            <div>
+                                <h2>最近事件</h2>
+                                <p>群里的每一次变化，都有迹可循。</p>
+                            </div>
+                            <span class="small-badge">暂无记录</span>
+                        </div>
+                        <div class="empty-state">
+                            <div class="empty-icon">
+                                <img class="icon" src="{{ url_for('static', path='/images/log.svg') }}" alt="" aria-hidden="true">
+                            </div>
+                            <h3>这里还很安静</h3>
+                            <p>接入群组后，成员验证与违规处理记录会显示在这里。</p>
+                        </div>
+                    </section>
+                </div>
+                <aside class="sidebar">
+                    <section class="panel onboarding">
+                        <span class="eyebrow">GET STARTED</span>
+                        <h2>开始守护你的群组</h2>
+                        <p class="intro">只需几步，搭建属于你的群管理助手。</p>
+                        <ol class="steps">
+                            <li>
+                                <span class="step-number step-number--current">1</span>
+                                <div>
+                                    <h3>连接机器人</h3>
+                                    <p>从 BotFather 获取 Bot Token</p>
+                                    <span class="step-tag">等待配置</span>
+                                </div>
+                            </li>
+                            <li>
+                                <span class="step-number">2</span>
+                                <div>
+                                    <h3>绑定 Telegram 群组</h3>
+                                    <p>将机器人加入目标群并设为管理员</p>
+                                </div>
+                            </li>
+                            <li>
+                                <span class="step-number">3</span>
+                                <div>
+                                    <h3>开启防护规则</h3>
+                                    <p>按需配置验证与反垃圾策略</p>
+                                </div>
+                            </li>
+                        </ol>
+                        <a class="button button--primary button--full-width button--spread" href="/group">
+                            开始配置
+                            <img class="button-icon" src="{{ url_for('static', path='/images/arrow-right.svg') }}" alt="" aria-hidden="true">
+                        </a>
+                    </section>
+                    <section class="panel tips">
+                        <img class="tip-icon" src="{{ url_for('static', path='/images/info.svg') }}" alt="" aria-hidden="true">
+                        <h3>小提示</h3>
+                        <p>建议使用 Telegram 超级群，并授予机器人删除消息、封禁成员等所需权限。</p>
+                        <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer">
+                            打开 BotFather
+                            <img class="button-icon" src="{{ url_for('static', path='/images/arrow-up-right.svg') }}" alt="" aria-hidden="true">
+                        </a>
+                    </section>
+                </aside>
+            </div>
+            {% include 'partials/footer.html' %}
+        </main>
+    </body>
 </html>

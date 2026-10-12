@@ -1,0 +1,242 @@
+/* 入群验证独立样式，正文 14px、辅助文字 12px。 */
+.verification-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    align-items: start;
+    gap: 20px;
+}
+
+.verification-config,
+.verification-preview,
+.verification-runtime {
+    padding: 24px;
+}
+
+.verification-help {
+    margin-top: 7px;
+    color: #92969c;
+    font-size: 12px;
+    line-height: 1.8;
+}
+
+.verification-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+/* 原生复选框保留键盘操作，轨道仅负责开关外观。 */
+.verification-switch-area {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #858a91;
+    font-size: 12px;
+}
+
+.verification-switch {
+    position: relative;
+    display: block;
+    width: 40px;
+    height: 24px;
+    flex-shrink: 0;
+}
+
+.verification-switch input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+    z-index: 1;
+}
+
+.verification-switch-track {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: #d8dde3;
+    border-radius: 12px;
+}
+
+.verification-switch-track::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fff;
+}
+
+.verification-switch input:checked + .verification-switch-track {
+    background: #252a30;
+}
+
+.verification-switch input:checked + .verification-switch-track::after {
+    left: 19px;
+}
+
+.verification-switch input:focus-visible + .verification-switch-track {
+    outline: 2px solid #6683e2;
+    outline-offset: 3px;
+}
+
+/* 验证方式选择 */
+.verification-methods {
+    margin: 28px 0 0;
+    padding: 0;
+    border: 0;
+}
+
+.verification-methods legend {
+    padding: 0;
+    margin-bottom: 12px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.verification-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    cursor: pointer;
+}
+
+.verification-option + .verification-option {
+    margin-top: 12px;
+}
+
+.verification-option:has(input:checked) {
+    border-color: #a2acba;
+    background: #fafbfc;
+}
+
+.verification-option input {
+    accent-color: #252a30;
+    margin: 0;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+.verification-option-copy p {
+    font-size: 12px;
+    color: #92969c;
+    margin-top: 3px;
+}
+
+.verification-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+}
+
+.verification-actions .verification-help {
+    margin: 0;
+}
+
+.verification-config button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* 仅供预览的消息卡片 */
+.verification-message {
+    padding: 16px;
+    margin-top: 22px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #f8f9fb;
+    font-size: 14px;
+}
+
+.verification-question {
+    margin-top: 14px;
+    font-weight: 600;
+}
+
+.verification-preview-answers {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.verification-answer {
+    flex: 1;
+    padding: 7px;
+    border: 1px solid #dfe4eb;
+    border-radius: 5px;
+    background: #fff;
+    text-align: center;
+    font-size: 14px;
+}
+
+/* 欢迎语与变量插入 */
+.verification-section {
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+}
+
+.verification-label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.verification-input {
+    display: block;
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #e4e7ec;
+    border-radius: 7px;
+    background: #fafbfc;
+    color: var(--ink);
+    font: inherit;
+}
+
+.verification-input:focus {
+    outline: 2px solid #dfe6f3;
+    outline-offset: 1px;
+    border-color: #9caecb;
+}
+
+.verification-textarea {
+    resize: vertical;
+    min-height: 112px;
+}
+
+.verification-variables {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+    font-size: 12px;
+    color: #92969c;
+}
+
+.verification-variables .button {
+    padding: 4px 10px;
+}
+
+#preview-welcome {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+/* 两个独立模块各占一张卡片。 */
+.welcome-config {
+    margin-top: 20px;
+}

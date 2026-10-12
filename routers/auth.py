@@ -1,7 +1,7 @@
 import re
 from tortoise.exceptions import IntegrityError
 from fastapi import APIRouter, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from dao.models import Administrator
 from utils.security import (
     get_csrf_token,
@@ -70,6 +70,9 @@ async def setup_submit(
 
     # 检查不通过：重新显示页面，传入错误提示和已填的账号。
     if error:
+        # 异步提交只返回错误信息，浏览器无需刷新整页。
+        if "application/json" in request.headers.get("accept", ""):
+            return JSONResponse({"error": error}, status_code=400)
         return templates.TemplateResponse(
             request=request,
             name="setup.html",
@@ -99,6 +102,11 @@ async def setup_submit(
     # 创建成功，清除初始化会话。
     request.session.clear()
 
+    # 异步提交由前端保存一次性成功提示，再跳转登录页。
+    if "application/json" in request.headers.get("accept", ""):
+        return JSONResponse({"message": "管理员创建成功，请登录。", "redirect": "/login"})
+
+    request.session["success_message"] = "管理员创建成功，请登录。"
     # 跳转到登录页面。
     return RedirectResponse("/login", status_code=303)
 
@@ -110,6 +118,7 @@ async def login_page(request: Request):
     if not await Administrator.exists():
         return RedirectResponse("/setup", status_code=303)
 
+    # 会话中的管理员仍然存在，说明已登录，直接进入首页。
     if await Administrator.filter(id=request.session.get("admin_id")).exists():
         return RedirectResponse("/", status_code=303)
 
@@ -119,12 +128,15 @@ async def login_page(request: Request):
         context={
             "page_title": "登录 · 黑猫群管",
             "csrf_token": get_csrf_token(request),
+            # 普通表单提交的提示读取后即删除，刷新不会重复显示。
+            "success": request.session.pop("success_message", ""),
             "error": "",
             "username": "",
         },
     )
 
 
+# 接收登录表单，验证成功后保存登录状态。
 @router.post("/login", response_class=HTMLResponse)
 async def login_submit(
     request: Request,
@@ -132,15 +144,22 @@ async def login_submit(
     password: str = Form(...),
     csrf_token: str = Form(...),
 ):
+    # 尚未创建管理员时，先完成初始化。
     if not await Administrator.exists():
         return RedirectResponse("/setup", status_code=303)
 
+    # 校验表单令牌，防止其他网站伪造登录请求。
     if not valid_csrf_token(request, csrf_token):
         raise HTTPException(status_code=403, detail="表单已过期，请刷新页面后重试。")
 
+    # 账号去掉首尾空格，密码保持用户输入的原样。
     username = username.strip()
     admin = await Administrator.get_or_none(username=username)
+    # 账号不存在和密码错误使用相同提示，避免暴露账号是否存在。
     if admin is None or not verify_password(password, admin.password_hash):
+        if "application/json" in request.headers.get("accept", ""):
+            return JSONResponse({"error": "账号或密码错误。"}, status_code=401)
+        # 保留账号供用户重试，不把密码传回页面。
         return templates.TemplateResponse(
             request=request,
             name="login.html",
@@ -156,4 +175,24 @@ async def login_submit(
     # 清除旧会话，登录后只保存管理员身份。
     request.session.clear()
     request.session["admin_id"] = admin.id
+    # 异步提交让首页显示一次成功提示，避免 fetch 跟随跳转时提前消耗提示。
+    if "application/json" in request.headers.get("accept", ""):
+        return JSONResponse({"message": "登录成功", "redirect": "/"})
+    request.session["success_message"] = "登录成功"
+    # 使用 303 跳转，让浏览器以 GET 请求打开首页，避免重复提交表单。
     return RedirectResponse("/", status_code=303)
+
+
+# 退出登录表单，清除当前浏览器的登录会话。
+@router.post("/logout")
+async def logout_submit(request: Request, csrf_token: str = Form(...)):
+    # 校验首页生成的令牌，防止其他网站伪造退出请求。
+    if not valid_csrf_token(request, csrf_token):
+        raise HTTPException(status_code=403, detail="表单已过期，请刷新页面后重试。")
+
+    # 同时移除管理员身份和旧 CSRF 令牌。
+    request.session.clear()
+    # 登录页读取后即删除，刷新不会重复弹出退出提示。
+    request.session["success_message"] = "已退出登录"
+    return RedirectResponse("/login", status_code=303)
+

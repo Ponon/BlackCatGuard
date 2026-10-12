@@ -1,20 +1,651 @@
-body {
-    margin: 0;
-    background: #f5f6f8;
-    color: #202938;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+/* 首页字号：正文与操作 14px，辅助说明与标签 12px，标题和指标单独设置。 */
+:root {
+	color-scheme: light;
+	--ink: #202326;
+	--muted: #92969c;
+	--line: #eceef0;
 }
 
-.container {
-    max-width: 960px;
-    margin: 80px auto;
-    padding: 0 24px;
+* {
+	box-sizing: border-box;
+}
+
+html {
+	scroll-behavior: smooth;
+	background: #f8f9fb;
+}
+
+body {
+	margin: 0;
+	color: var(--ink);
+	font: 14px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+	-webkit-font-smoothing: antialiased;
+}
+
+button,
+input {
+	font: inherit;
+}
+
+button,
+a {
+	-webkit-tap-highlight-color: transparent;
+}
+
+button {
+	cursor: pointer;
+}
+
+a {
+	color: inherit;
+	text-decoration: none;
+}
+
+button:focus-visible,
+a:focus-visible {
+	outline: 2px solid #6683e2;
+	outline-offset: 4px;
+}
+
+h1,
+h2,
+h3,
+p {
+	margin: 0;
+}
+
+/* 图标资源：直接替换 static/images 中同名 SVG 即可。 */
+.icon {
+    display: block;
+    width: 20px;
+    height: 20px;
+}
+
+.button-icon {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
+/* 顶部品牌与账号区域 */
+.header {
+	background: #fff;
+	border-bottom: 1px solid var(--line);
+}
+
+.topbar {
+	display: flex;
+	align-items: center;
+	gap: 24px;
+	max-width: 1200px;
+	margin: auto;
+	height: 72px;
+}
+
+.brand {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	font-size: 15px;
+	font-weight: 700;
+	letter-spacing: -.4px;
+}
+
+.brand-logo {
+	width: 27px;
+	height: 27px;
+}
+
+.account {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-left: auto;
+	font-size: 14px;
+}
+
+.logout-form {
+	margin: 0 0 0 8px;
+}
+
+.environment {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	color: #81868c;
+	margin-right: 15px;
+	font-size: 12px;
+}
+
+.environment-icon {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+}
+
+.avatar {
+	display: grid;
+	place-items: center;
+	width: 29px;
+	height: 29px;
+	border-radius: 50%;
+	background: linear-gradient(135deg, #e4eafb, #e9e0f3, #dcece8);
+	color: #586577;
+	font-weight: 600;
+}
+
+.text-button {
+	border: 0;
+	background: transparent;
+	color: #858a91;
+	padding: 5px;
+	font-size: 14px;
+}
+
+.text-button:hover {
+	color: #202326;
+}
+
+/* 主导航 */
+.navigation {
+	display: flex;
+	gap: 29px;
+	max-width: 1200px;
+	margin: auto;
+	overflow-x: auto;
+}
+
+.navigation-link {
+	position: relative;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 13px 0 16px;
+	white-space: nowrap;
+	border: 0;
+	background: none;
+	font-size: 14px;
+	color: #858a91;
+}
+
+.navigation-icon {
+	width: 16px;
+	height: 16px;
+}
+
+.navigation-link--active {
+	color: #24272b;
+	font-weight: 600;
+}
+
+.navigation-link--active::after {
+	content: '';
+	position: absolute;
+	height: 2px;
+	background: #272b30;
+	bottom: 0;
+	left: 0;
+	right: 0;
+}
+
+.navigation-link:hover {
+	color: #202326;
+}
+
+/* 页面标题 */
+.page-heading {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	max-width: 1200px;
+	margin: auto;
+	padding: 40px 0;
+}
+
+.title-line {
+	display: flex;
+	align-items: center;
+	gap: 12px;
 }
 
 h1 {
-    font-size: 32px;
+	font-size: 26px;
+	font-weight: 650;
+	letter-spacing: -.8px;
 }
 
-p {
-    color: #64748b;
+.badge {
+	background: #24282d;
+	color: #fff;
+	font-size: 12px;
+	letter-spacing: .7px;
+	padding: 2px 5px;
+	border-radius: 3px;
+}
+
+.page-heading p {
+	color: #91969c;
+	margin-top: 5px;
+	font-size: 14px;
+}
+
+/* 通用按钮及变体 */
+.button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 15px;
+	padding: 8px 15px;
+	border-radius: 6px;
+	border: 1px solid #e8eaed;
+	background: #fff;
+	color: #50565d;
+	font-size: 14px;
+	line-height: 1.5;
+	transition: background .18s, border-color .18s;
+}
+
+.button:hover {
+	background: #f5f6f8;
+	border-color: #d9dde3;
+}
+
+.button--primary {
+	background: #22262a;
+	border-color: #22262a;
+	color: white;
+}
+
+.button--primary:hover {
+	background: #3b4148;
+}
+
+/* 内容容器与卡片 */
+.dashboard {
+	max-width: 1200px;
+	margin: auto;
+}
+
+.panel {
+	background: #fff;
+	border: 1px solid #e9ecf0;
+	border-radius: 10px;
+	box-shadow: 0 3px 15px #1c263002;
+}
+
+.overview {
+	padding: 23px;
+}
+
+.section-heading {
+	display: flex;
+	justify-content: space-between;
+	gap: 15px;
+	align-items: center;
+}
+
+h2 {
+	font-size: 15px;
+	font-weight: 650;
+	letter-spacing: -.25px;
+}
+
+.section-heading p {
+	margin-top: 4px;
+	font-size: 12px;
+	color: #92969c;
+}
+
+.status {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 12px;
+	color: #858a91;
+	padding: 4px 9px;
+	border: 1px solid var(--line);
+	border-radius: 5px;
+	white-space: nowrap;
+}
+
+.status-icon {
+	width: 10px;
+	height: 10px;
+	flex-shrink: 0;
+}
+
+/* 概览指标 */
+.stats {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 14px;
+	margin-top: 21px;
+}
+
+.stat {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	border: 1px solid var(--line);
+	border-radius: 8px;
+	padding: 17px;
+}
+
+.stat-icon {
+	position: absolute;
+	right: 14px;
+	top: 13px;
+	display: grid;
+	place-items: center;
+	width: 27px;
+	height: 27px;
+	border-radius: 7px;
+}
+
+.icon-background--blue {
+	color: #5b89c9;
+	background: #edf4ff;
+}
+
+.icon-background--violet {
+	color: #8c75c0;
+	background: #f3effb;
+}
+
+.icon-background--green {
+	color: #5c9c81;
+	background: #eef7f2;
+}
+
+.icon-background--orange {
+	color: #c79762;
+	background: #fcf3e9;
+}
+
+.stat-label {
+	font-size: 14px;
+	color: #858a92;
+}
+
+.stat-value {
+	font-size: 27px;
+	font-weight: 600;
+	margin-top: 14px;
+	line-height: 1.2;
+}
+
+.stat-value--text {
+	font-size: 20px;
+	margin-top: 18px;
+	margin-bottom: 4px;
+}
+
+.stat-note {
+	font-size: 12px;
+	color: #a2a6ad;
+	margin-top: 7px;
+}
+
+/* 左右分栏 */
+.content-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 286px;
+	align-items: start;
+	gap: 20px;
+	margin-top: 20px;
+}
+
+.main-column,
+.sidebar {
+	display: grid;
+	gap: 20px;
+}
+
+.features,
+.events {
+	padding: 23px;
+}
+
+.small-badge {
+	font-size: 12px;
+	color: #9499a1;
+	background: #fafbfc;
+	border: 1px solid var(--line);
+	padding: 3px 7px;
+	border-radius: 4px;
+	white-space: nowrap;
+}
+
+/* 群组防护列表 */
+.feature-list {
+	border: 1px solid var(--line);
+	border-radius: 7px;
+	margin-top: 21px;
+	overflow: hidden;
+}
+
+.feature-row {
+	display: flex;
+	gap: 12px;
+	align-items: center;
+	padding: 17px 13px;
+}
+
+.feature-row + .feature-row {
+	border-top: 1px solid var(--line);
+}
+
+.feature-icon {
+	display: grid;
+	place-items: center;
+	flex-shrink: 0;
+	width: 31px;
+	height: 31px;
+	border-radius: 8px;
+	font-size: 20px;
+}
+
+h3 {
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.feature-copy {
+	flex: 1;
+}
+
+.feature-copy p {
+	font-size: 12px;
+	color: #92969c;
+	margin-top: 2px;
+}
+
+.muted-status {
+	color: #9da2aa;
+	font-size: 12px;
+	white-space: nowrap;
+}
+
+.button--compact {
+	padding: 5px 9px;
+	font-size: 14px;
+	gap: 10px;
+	margin-left: 7px;
+}
+
+.panel-foot {
+	display: flex;
+	align-items: center;
+	gap: 7px;
+	font-size: 12px;
+	color: #a0a5ac;
+	margin-top: 17px;
+}
+
+/* 事件空状态 */
+.empty-state {
+	padding: 27px 10px 16px;
+	text-align: center;
+}
+
+.empty-icon {
+	display: grid;
+	place-items: center;
+	width: 39px;
+	height: 39px;
+	border-radius: 12px;
+	background: #f7f8fa;
+	color: #b6bec8;
+	font-size: 24px;
+	margin: 0 auto 11px;
+}
+
+.empty-state h3 {
+	color: #767c85;
+	font-weight: 500;
+}
+
+.empty-state p {
+	font-size: 12px;
+	margin-top: 5px;
+	color: #a4a9b0;
+}
+
+/* 接入引导 */
+.onboarding {
+	padding: 23px;
+}
+
+.eyebrow {
+	color: #a0a5ac;
+	font-size: 12px;
+	letter-spacing: 1.6px;
+}
+
+.onboarding h2 {
+	margin-top: 8px;
+}
+
+.intro {
+	font-size: 14px;
+	color: #969ba3;
+	margin-top: 7px;
+}
+
+.steps {
+	list-style: none;
+	padding: 0;
+	margin: 24px 0;
+}
+
+.steps li {
+	position: relative;
+	display: flex;
+	gap: 12px;
+	padding-bottom: 28px;
+}
+
+.steps li:last-child {
+	padding-bottom: 0;
+}
+
+.steps li:not(:last-child)::before {
+	content: '';
+	position: absolute;
+	left: 12px;
+	top: 30px;
+	bottom: 5px;
+	border-left: 1px dashed #e2e5ea;
+}
+
+.step-number {
+	display: grid;
+	place-items: center;
+	width: 26px;
+	height: 26px;
+	border: 1px solid var(--line);
+	background: #fafbfc;
+	color: #a4a9b0;
+	border-radius: 50%;
+	font-size: 14px;
+	flex-shrink: 0;
+}
+
+.step-number--current {
+	background: #262a2f;
+	border-color: #262a2f;
+	color: white;
+}
+
+.steps h3 {
+	font-size: 14px;
+	margin-top: 3px;
+}
+
+.steps p {
+	color: #9ca1a9;
+	font-size: 12px;
+	margin-top: 4px;
+}
+
+.step-tag {
+	display: inline-block;
+	font-size: 12px;
+	color: #a38d67;
+	background: #faf6ee;
+	padding: 1px 6px;
+	margin-top: 7px;
+	border-radius: 3px;
+}
+
+/* 宽度变体只控制宽度，沿用 .button 的默认居中对齐。 */
+.button--full-width {
+	width: 100%;
+}
+
+/* 仅带尾部箭头、需要两端对齐的按钮使用。 */
+.button--spread {
+	justify-content: space-between;
+}
+
+/* 提示卡片 */
+.tips {
+	padding: 21px 23px;
+}
+
+.tip-icon {
+	width: 24px;
+	height: 24px;
+	float: right;
+}
+
+.tips p {
+	font-size: 14px;
+	line-height: 1.9;
+	color: #969ba3;
+	margin-top: 8px;
+}
+
+.tips a {
+	display: inline-flex;
+	gap: 15px;
+	font-size: 14px;
+	color: #686f79;
+	margin-top: 15px;
+}
+
+/* 页脚 */
+.page-footer {
+	display: flex;
+	justify-content: space-between;
+	padding: 26px 0;
+	color: #aeb3bb;
+	font-size: 12px;
+}
+
+/* 开源项目链接 */
+.project-link:hover {
+	color: var(--ink);
+	text-decoration: underline;
 }

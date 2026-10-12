@@ -1,0 +1,67 @@
+/* 顶部错误提示：滑入后停留约 3 秒，再向上滑出。 */
+.error_toast {
+	position: fixed;
+	top: 20px;
+	left: 50%;
+	z-index: 1000;
+	box-sizing: border-box;
+	width: max-content;
+	max-width: calc(100% - 32px);
+	padding: 0px 20px;
+	border: 1px solid #743d43;
+	border-radius: 10px;
+	background: #000000;
+	color: #ffffff;
+	font-size: 14px;
+	line-height: 38px;
+	overflow-wrap: anywhere;
+	box-shadow: 0 8px 24px #00000040;
+	pointer-events: none;
+	animation: error_toast_slide 4s ease both;
+}
+
+@keyframes error_toast_slide {
+
+	0%,
+	100% {
+		transform: translate(-50%, calc(-100% - 24px));
+		opacity: 0;
+		visibility: hidden;
+	}
+
+	10%,
+	85% {
+		transform: translate(-50%, 0);
+		opacity: 1;
+		visibility: visible;
+	}
+}
+
+/* 减少动态效果时只淡入淡出，避免大幅位移。 */
+@media (prefers-reduced-motion: reduce) {
+	.error_toast {
+		animation-name: error_toast_fade;
+	}
+}
+
+@keyframes error_toast_fade {
+
+	0%,
+	100% {
+		transform: translateX(-50%);
+		opacity: 0;
+		visibility: hidden;
+	}
+
+	10%,
+	85% {
+		transform: translateX(-50%);
+		opacity: 1;
+		visibility: visible;
+	}
+}
+
+/* 成功提示沿用顶部滑动动画，使用绿色边框区分错误。 */
+.success_toast {
+	border-color: #3d7450;
+}

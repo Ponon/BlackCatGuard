@@ -1,0 +1,46 @@
+        <header class="header">
+            <div class="topbar">
+                <a class="brand" href="/" aria-label="黑猫群管首页">
+                    <img class="brand-logo" src="{{ url_for('static', path='/images/logo.svg') }}" alt="">
+                    <span>黑猫群管</span>
+                </a>
+                <div class="account">
+                    <div class="environment">
+                        <img class="environment-icon" src="{{ url_for('static', path='/images/status-online.svg') }}" alt="" aria-hidden="true">
+                        <span>本地运行</span>
+                    </div>
+                    <span class="avatar">{{ username[:1]|upper }}</span>
+                    <span class="account-name">{{ username }}</span>
+                    <form class="logout-form" method="post" action="/logout">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <button class="text-button" type="submit">退出登录</button>
+                    </form>
+                </div>
+            </div>
+            <nav class="navigation" aria-label="主导航">
+                <a class="navigation-link{% if active_page not in ['group', 'settings', 'verification'] %} navigation-link--active{% endif %}" href="/" {% if active_page not in ['group', 'settings', 'verification'] %}aria-current="page"{% endif %}>
+                    <img class="navigation-icon" src="{{ url_for('static', path='/images/dashboard.svg') }}" alt="" aria-hidden="true">
+                    工作台
+                </a>
+                <a class="navigation-link{% if active_page == 'group' %} navigation-link--active{% endif %}" href="/group" {% if active_page == 'group' %}aria-current="page"{% endif %}>
+                    <img class="navigation-icon" src="{{ url_for('static', path='/images/group.svg') }}" alt="" aria-hidden="true">
+                    群管理
+                </a>
+                <a class="navigation-link{% if active_page == 'verification' %} navigation-link--active{% endif %}" href="/verification" {% if active_page == 'verification' %}aria-current="page"{% endif %}>
+                    <img class="navigation-icon" src="{{ url_for('static', path='/images/verify.svg') }}" alt="" aria-hidden="true">
+                    入群设置
+                </a>
+                <button type="button" class="navigation-link" data-notice="反垃圾规则功能即将接入。">
+                    <img class="navigation-icon" src="{{ url_for('static', path='/images/rules.svg') }}" alt="" aria-hidden="true">
+                    反垃圾规则
+                </button>
+                <a class="navigation-link" href="/#events">
+                    <img class="navigation-icon" src="{{ url_for('static', path='/images/log.svg') }}" alt="" aria-hidden="true">
+                    事件日志
+                </a>
+                <a class="navigation-link{% if active_page == 'settings' %} navigation-link--active{% endif %}" href="/settings" {% if active_page == 'settings' %}aria-current="page"{% endif %}>
+                    <img class="navigation-icon" src="{{ url_for('static', path='/images/settings.svg') }}" alt="" aria-hidden="true">
+                    系统设置
+                </a>
+            </nav>
+        </header>

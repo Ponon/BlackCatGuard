@@ -1,20 +1,26 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 	<head>
+		<link rel="icon" type="image/svg+xml" href="{{ url_for('static', path='/images/logo.svg') }}">
 		<meta charset="UTF-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<title>{{ page_title }}</title>
-		<link rel="stylesheet" href="{{ url_for('static', path='/css/setup.css') }}">
+		<link rel="stylesheet" href="{{ url_for('static', path='/css/auth.css') }}">
+			<link rel="stylesheet" href="{{ url_for('static', path='/css/toast.css') }}">
+		<script src="{{ url_for('static', path='/js/toast.js') }}?v=20261012-4" defer></script>
+		<script src="{{ url_for('static', path='/js/auth.js') }}?v=20261012-4" defer></script>
 	</head>
 	<body>
+		{% if error %}
+		<!-- 提示条固定在视口顶部，由 CSS 控制滑入和自动滑出。 -->
+		<div class="error_toast" role="alert">{{ error }}</div>
+		{% endif %}
 		<main class="container">
 			<img class="container_logo" src="{{ url_for('static', path='/images/logo.svg') }}"/>
 			<p class="container_title">创建管理员</p>
 			<p class="container_brief">该账号用于登录黑猫群管后台。</p>
 
-			{% if error %}
-			<p role="alert">{{ error }}</p>
-			{% endif %}
+
 
 			<form method="post" action="/setup" class="setup_input" autocomplete="off">
 				<input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -27,7 +33,7 @@
 					</div>
 					
 					<div class="setup_input_list_item">
-						<img src="{{ url_for('static', path='/images/username.svg') }}" alt="" />
+						<img src="{{ url_for('static', path='/images/password.svg') }}" alt="" />
 						<input id="password" type="password" name="password" placeholder="请输入密码" autocomplete="new-password"
 							minlength="8" maxlength="128" required>
 					</div>

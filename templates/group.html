@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{{ page_title }}</title>
+        <link rel="icon" type="image/svg+xml" href="{{ url_for('static', path='/images/logo.svg') }}">
+        <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}?v=7">
+        <link rel="stylesheet" href="{{ url_for('static', path='/css/group.css') }}?v=7">
+        <link rel="stylesheet" href="{{ url_for('static', path='/css/toast.css') }}">
+        <script src="{{ url_for('static', path='/js/toast.js') }}?v=30261012-4" defer></script>
+        <script src="{{ url_for('static', path='/js/dashboard.js') }}" defer></script>
+        <script src="{{ url_for('static', path='/js/group.js') }}?v=7" defer></script>
+    </head>
+    <body>
+        {% include 'partials/header.html' %}
+        <section class="page-heading">
+            <div>
+                <div class="title-line">
+                    <h1>群管理</h1>
+                    <span class="badge">TELEGRAM</span>
+                </div>
+                <p>连接你的机器人，为唯一的目标群组配置守护助手。</p>
+            </div>
+            <a class="button" href="/">返回工作台</a>
+        </section>
+        <main class="dashboard">
+            <div class="group-layout">
+                <div class="group-main">
+                    <section class="panel group-config">
+                        <div class="section-heading">
+                            <div>
+                                <h2>连接配置</h2>
+                                <p>整个后台共用一个机器人，仅绑定一个群组。</p>
+                            </div>
+                            <span class="small-badge" id="config-status">{{ '已保存' if configured else '未配置' }}</span>
+                        </div>
+                        <!-- 已保存的 Token 默认以圆点显示，点击眼睛切换明文。 -->
+                        <form id="group-form" class="group-form" action="/group/config" method="post" novalidate>
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <div class="config-section">
+                                <div class="config-section-heading">
+                                    <div class="feature-icon icon-background--blue">
+                                        <img class="icon" src="{{ url_for('static', path='/images/robot.svg') }}" alt="">
+                                    </div>
+                                    <div>
+                                        <h3>机器人信息</h3>
+                                        <p>使用 BotFather 创建的机器人凭据。</p>
+                                    </div>
+                                </div>
+                                <label class="field-label" for="bot-token">Bot Token</label>
+                                <div class="token-field">
+                                    <input class="config-input token-input" id="bot-token" name="bot_token" type="password" value="{{ bot_token }}" maxlength="256" autocomplete="new-password" spellcheck="false" placeholder="请输入 BotFather 提供的 Token">
+                                    <button class="token-toggle" id="toggle-token" type="button" aria-label="显示 Token" aria-controls="bot-token" aria-pressed="false">
+                                        <img id="token-eye" src="{{ url_for('static', path='/images/eye.svg') }}" data-show="{{ url_for('static', path='/images/eye.svg') }}" data-hide="{{ url_for('static', path='/images/eye-off.svg') }}" alt="">
+                                    </button>
+                                </div>
+                                <p class="field-help">默认隐藏 Token，点击右侧眼睛查看或检查。<a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer">打开 BotFather</a></p>
+                            </div>
+                            <div class="config-section">
+                                <div class="config-section-heading">
+                                    <div class="feature-icon icon-background--violet">
+                                        <img class="icon" src="{{ url_for('static', path='/images/group.svg') }}" alt="">
+                                    </div>
+                                    <div>
+                                        <h3>目标群组</h3>
+                                        <p>先将机器人加入群组，并设为管理员。</p>
+                                    </div>
+                                </div>
+                                <label class="field-label" for="chat-id">群 ID</label>
+                                <input class="config-input" id="chat-id" name="chat_id" type="text" maxlength="32" value="{{ chat_id }}" placeholder="例如 -1001234567890" autocomplete="off" spellcheck="false" required>
+                                <p class="field-help">填写数字 ID，通常以 -100 开头；不支持群邀请链接。</p>
+                            </div>
+                            <div class="config-actions">
+                                <button class="button button--primary" type="submit" id="save-config">保存配置</button>
+                                <span class="field-help">保存后自动检测；清空两项将关闭入群功能。</span>
+                            </div>
+                        </form>
+                    </section>
+                    {% include 'partials/footer.html' %}
+                </div>
+                <aside class="sidebar">
+                    <section class="panel group-check">
+                        <div class="section-heading">
+                            <div>
+                                <h2>配置检测</h2>
+                                <p>检查连接、目标群和管理权限。</p>
+                            </div>
+                            <img class="icon" src="{{ url_for('static', path='/images/verify.svg') }}" alt="">
+                        </div>
+                        <div class="check-summary">
+                            <span class="check-status" id="check-status">尚未检测</span>
+                            <p id="check-message">{{ '点击下方按钮检测当前配置。' if configured else '保存配置后，点击下方按钮开始检测。' }}</p>
+                        </div>
+                        <dl class="detected-info">
+                            <div><dt>机器人</dt><dd id="bot-name">—</dd></div>
+                            <div><dt>群组</dt><dd id="group-name">—</dd></div>
+                        </dl>
+                        <ul class="check-list" id="check-list"></ul>
+                        <button type="button" class="button button--primary button--full-width" id="check-config" {% if not configured %}disabled{% endif %}>检测配置</button>
+                    </section>
+                </aside>
+            </div>
+        </main>
+    </body>
+</html>

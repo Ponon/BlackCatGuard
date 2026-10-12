@@ -1,0 +1,226 @@
+/* 群管理布局：复用首页基础样式，正文 14px，辅助说明 12px。 */
+.group-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: 20px;
+    align-items: start;
+}
+
+.group-config,
+.group-check {
+    padding: 24px;
+}
+
+/* 机器人与群组表单 */
+.group-form {
+    margin-top: 24px;
+}
+
+.config-section + .config-section {
+    margin-top: 28px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+}
+
+.config-section-heading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 22px;
+}
+
+.config-section-heading p {
+    color: #92969c;
+    font-size: 12px;
+    margin-top: 3px;
+}
+
+.field-label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.config-input {
+    display: block;
+    width: 100%;
+    padding: 11px 13px;
+    border: 1px solid #e4e7ec;
+    border-radius: 7px;
+    background: #fafbfc;
+    color: var(--ink);
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.config-input::placeholder {
+    color: #a1a7af;
+}
+
+.config-input:focus {
+    outline: 2px solid #dfe6f3;
+    outline-offset: 1px;
+    border-color: #9caecb;
+    background: #fff;
+}
+
+.field-help {
+    font-size: 12px;
+    color: #92969c;
+    margin-top: 8px;
+    line-height: 1.8;
+}
+
+.field-help a {
+    color: #5b79a6;
+    margin-left: 5px;
+}
+
+.config-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 28px;
+    padding-top: 22px;
+    border-top: 1px solid var(--line);
+}
+
+.config-actions .field-help {
+    margin: 0;
+}
+
+/* 检测状态与逐项结果 */
+.check-summary {
+    padding: 17px;
+    background: #f8f9fb;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    margin-top: 22px;
+}
+
+.check-status {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.check-summary p {
+    font-size: 12px;
+    color: #92969c;
+    margin-top: 7px;
+    line-height: 1.9;
+}
+
+.detected-info {
+    margin: 18px 0 0;
+}
+
+.detected-info div {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+    margin-top: 10px;
+}
+
+.detected-info dt {
+    color: #92969c;
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+.detected-info dd {
+    margin: 0;
+    font-size: 14px;
+    text-align: right;
+    overflow-wrap: anywhere;
+}
+
+/* 检测结果单列展示：名称在左，状态在右。 */
+.check-list {
+    margin: 18px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+/* 未检测时空列表不占空间，按钮单独负责上方间距。 */
+.check-list:empty {
+    display: none;
+}
+
+.check-item {
+    padding: 9px 0;
+    border-top: 1px solid var(--line);
+}
+
+.check-item-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 14px;
+}
+
+.check-item p {
+    color: #92969c;
+    font-size: 12px;
+    margin-top: 5px;
+}
+
+.check-tag {
+    padding: 1px 6px;
+    font-size: 12px;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.check-tag--success {
+    background: #edf7f0;
+    color: #46825f;
+}
+
+.check-tag--error {
+    background: #fff0ee;
+    color: #b66a60;
+}
+
+.group-check .button {
+    margin-top: 24px;
+}
+
+.group-layout button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Token 输入框与独立的 SVG 显隐按钮。 */
+.token-field {
+    position: relative;
+}
+
+.token-input {
+    padding-right: 48px;
+}
+
+.token-toggle {
+    position: absolute;
+    top: 0;
+    right: 4px;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+}
+
+.token-toggle img {
+    width: 20px;
+    height: 20px;
+}
+
+.token-toggle:hover {
+    background: #edf0f4;
+}

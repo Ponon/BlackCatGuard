@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{{ page_title }}</title>
+        <link rel="icon" type="image/svg+xml" href="{{ url_for('static', path='/images/logo.svg') }}">
+        <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}?v=7">
+        <link rel="stylesheet" href="{{ url_for('static', path='/css/verification.css') }}?v=3">
+        <link rel="stylesheet" href="{{ url_for('static', path='/css/toast.css') }}">
+        <script src="{{ url_for('static', path='/js/toast.js') }}?v=30261012-4" defer></script>
+        <script src="{{ url_for('static', path='/js/dashboard.js') }}" defer></script>
+        <script src="{{ url_for('static', path='/js/verification.js') }}?v=4" defer></script>
+    </head>
+    <body>
+        {% include 'partials/header.html' %}
+        <section class="page-heading">
+            <div>
+                <div class="title-line">
+                    <h1>入群设置</h1>
+                    <span class="badge">JOIN SETTINGS</span>
+                </div>
+                <p>配置新成员入群时的验证与欢迎流程。</p>
+            </div>
+            <a class="button" href="/group">群组配置</a>
+        </section>
+        <main class="dashboard">
+            <div class="verification-layout">
+                <div>
+                    <section class="panel verification-config">
+                        <form id="verification-form" data-group-configured="{{ 'true' if group_configured else 'false' }}" action="/verification" method="post" novalidate>
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <div class="verification-heading">
+                                <div>
+                                    <h2>启用入群验证</h2>
+                                    <p class="verification-help">关闭时保留设置，方便下次继续使用。</p>
+                                </div>
+                                <div class="verification-switch-area">
+                                    <span id="verification-status">{{ '已选择启用' if enabled else '已关闭' }}</span>
+                                    <label class="verification-switch">
+                                        <input id="verification-enabled" name="enabled" type="checkbox" role="switch" aria-label="启用入群验证" {% if enabled %}checked{% endif %}>
+                                        <span class="verification-switch-track" aria-hidden="true"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <fieldset class="verification-methods">
+                                <legend>验证方式</legend>
+                                <label class="verification-option">
+                                    <input type="radio" name="method" value="button" {% if method == 'button' %}checked{% endif %}>
+                                    <img class="icon" src="{{ url_for('static', path='/images/verify.svg') }}" alt="">
+                                    <div class="verification-option-copy">
+                                        <h3>按钮验证</h3>
+                                        <p>新成员点击验证按钮，完成身份确认。</p>
+                                    </div>
+                                </label>
+                                <label class="verification-option">
+                                    <input type="radio" name="method" value="arithmetic" {% if method == 'arithmetic' %}checked{% endif %}>
+                                    <img class="icon" src="{{ url_for('static', path='/images/rules.svg') }}" alt="">
+                                    <div class="verification-option-copy">
+                                        <h3>算术验证</h3>
+                                        <p>新成员计算简单算术题，选择正确答案完成验证。</p>
+                                    </div>
+                                </label>
+                            </fieldset>
+                            <div class="verification-section">
+                                <label class="verification-label" for="timeout-seconds">验证超时（秒）</label>
+                                <input class="verification-input" id="timeout-seconds" name="timeout_seconds" type="number" min="10" max="3600" step="1" value="{{ timeout_seconds }}" required>
+                                <p class="verification-help">成员完成验证的时间，10～3600 秒。</p>
+                            </div>
+                            <div class="verification-actions">
+                                <button type="submit" class="button button--primary" id="save-verification">保存设置</button>
+                                <span class="verification-help" id="verification-save-state">修改后请保存</span>
+                            </div>
+                        </form>
+                    </section>
+                    <section class="panel verification-config welcome-config">
+                        <form id="welcome-form" data-group-configured="{{ 'true' if group_configured else 'false' }}" action="/welcome" method="post" novalidate>
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <div class="verification-heading">
+                                <div>
+                                    <h2>入群欢迎语</h2>
+                                    <p class="verification-help">独立启用，不受验证开关控制。</p>
+                                </div>
+                                <div class="verification-switch-area">
+                                    <span id="welcome-status">{{ '已选择启用' if welcome_enabled else '已关闭' }}</span>
+                                    <label class="verification-switch">
+                                        <input id="welcome-enabled" name="enabled" type="checkbox" role="switch" aria-label="启用入群欢迎语" {% if welcome_enabled %}checked{% endif %}>
+                                        <span class="verification-switch-track" aria-hidden="true"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="verification-section">
+                                <label class="verification-label" for="welcome-message">自定义入群欢迎语</label>
+                                <textarea class="verification-input verification-textarea" id="welcome-message" name="welcome_message" maxlength="2000" rows="4" required>{{ welcome_message }}</textarea>
+                                <div class="verification-variables">
+                                    <span>插入变量</span>
+                                    <button type="button" class="button" data-variable="{nickname}">昵称</button>
+                                    <button type="button" class="button" data-variable="{username}">@用户名</button>
+                                </div>
+                                <p class="verification-help">{% raw %}{nickname} 为成员昵称，{username} 为带 @ 的用户名；未设置用户名时显示昵称。{% endraw %}</p>
+                            </div>
+                            <div class="verification-section">
+                                <label class="verification-label" for="delete-after-seconds">欢迎语删除延时（秒）</label>
+                                <input class="verification-input" id="delete-after-seconds" name="delete_after_seconds" type="number" min="0" max="86400" step="1" value="{{ delete_after_seconds }}" required>
+                                <p class="verification-help">从欢迎语发送起计时，0 表示不自动删除。</p>
+                            </div>
+                            <div class="verification-actions">
+                                <button type="submit" class="button button--primary" id="save-welcome">保存欢迎语</button>
+                                <span class="verification-help" id="welcome-save-state">修改后请保存</span>
+                            </div>
+                        </form>
+                    </section>
+                    {% include 'partials/footer.html' %}
+                </div>
+                <aside class="sidebar">
+                    <section class="panel verification-preview">
+                        <div class="section-heading">
+                            <h2>验证消息预览</h2>
+                            <span class="small-badge">示意</span>
+                        </div>
+                        <div class="verification-message">
+                            <p>请完成入群验证。</p>
+                            <p class="verification-question" id="preview-question" {% if method == 'button' %}hidden{% endif %}>8 + 5 = ?</p>
+                            <div class="verification-preview-answers" id="preview-answers">
+                                {% if method == 'button' %}
+                                    <span class="verification-answer">点击验证</span>
+                                {% else %}
+                                    <span class="verification-answer">11</span>
+                                    <span class="verification-answer">13</span>
+                                    <span class="verification-answer">15</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <p class="verification-help">仅展示所选方式，不会向群里发送消息。</p>
+                    </section>
+                    <section class="panel verification-preview">
+                        <div class="section-heading">
+                            <h2>欢迎语预览</h2>
+                            <span class="small-badge">示意</span>
+                        </div>
+                        <div class="verification-message"><p id="preview-welcome"></p></div>
+                        <p class="verification-help">已开启验证：验证通过 → 删除验证消息 → 发送欢迎语。未开启验证：新成员入群后直接发送欢迎语。欢迎语关闭时均不发送。</p>
+                    </section>
+                    <section class="panel verification-runtime">
+                        <h3>执行服务待接入</h3>
+                        <p class="verification-help">当前支持保存验证配置。接入 Telegram 入群事件处理后，才会执行验证；开启设置不代表机器人已开始验证成员。</p>
+                    </section>
+                </aside>
+            </div>
+        </main>
+    </body>
+</html>
