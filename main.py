@@ -4,7 +4,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from database import init_db
+from database import init_db, close_db
 from routers import auth, pages
 from views import BASE_DIR
 
@@ -15,8 +15,14 @@ from security import load_session_secret
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    init_db()
-    yield
+    # 启动时初始化数据库。
+    await init_db()
+
+    try:
+        yield
+    finally:
+        # 服务关闭时释放连接。
+        await close_db()
 
 
 app = FastAPI(

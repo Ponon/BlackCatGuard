@@ -1,58 +1,45 @@
-import sqlite3
-from contextlib import contextmanager
 from pathlib import Path
+
+from tortoise import Tortoise
+
+from models import Administrator
 
 
 BASE_DIR = Path(__file__).resolve().parent
 DATABASE_PATH = BASE_DIR / "data" / "titguard.db"
 
 
-@contextmanager
-def get_db():
-    connection = sqlite3.connect(DATABASE_PATH)
-    connection.row_factory = sqlite3.Row
-
-    try:
-        with connection:
-            yield connection
-    finally:
-        connection.close()
-
-# 初始化数据库
-def init_db():
+# 启动时连接数据库。
+async def init_db():
     DATABASE_PATH.parent.mkdir(parents=True, exist_ok=True)
 
-    with get_db() as db:
-        db.execute("""
-            CREATE TABLE IF NOT EXISTS administrators (
-                id INTEGER PRIMARY KEY CHECK (id = 1),
-                username TEXT NOT NULL UNIQUE,
-                password_hash TEXT NOT NULL,
-                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
+    await Tortoise.init(
+        db_url=f"sqlite://{DATABASE_PATH.as_posix()}",
+        modules={
+            "models": ["models"],
+        },
+        use_tz=False,
+        timezone="UTC",
+    )
+
+    # 仅创建不存在的表，不清空已有数据。
+    await Tortoise.generate_schemas(safe=True)
 
 
-# 检查是否有管理员
-def has_admin() -> bool:
-    with get_db() as db:
-        admin = db.execute(
-            "SELECT id FROM administrators LIMIT 1"
-        ).fetchone()
+# 程序关闭时释放数据库连接。
+async def close_db():
+    await Tortoise.close_connections()
 
-    return admin is not None
 
-# 创建管理员
-def create_admin(username: str, password_hash: str):
-    with get_db() as db:
-        db.execute(
-            """
-            INSERT INTO administrators (
-                id,
-                username,
-                password_hash
-            )
-            VALUES (1, ?, ?)
-            """,
-            (username, password_hash),
-        )
+# 检查是否已经有管理员。
+async def has_admin() -> bool:
+    return await Administrator.exists()
+
+
+# 创建管理员。
+async def create_admin(username: str, password_hash: str):
+    return await Administrator.create(
+        id=1,
+        username=username,
+        password_hash=password_hash,
+    )
