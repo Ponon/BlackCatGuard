@@ -25,7 +25,7 @@ async def setup_page(request: Request):
         request=request,
         name="setup.html",
         context={
-            "page_title": "初始化 · 山雀群管",
+            "page_title": "初始化 · 黑猫群管",
             "csrf_token": get_csrf_token(request),
             "error": "",
             "username": "",
@@ -73,7 +73,7 @@ async def setup_submit(
             request=request,
             name="setup.html",
             context={
-                "page_title": "初始化 · 山雀群管",
+                "page_title": "初始化 · 黑猫群管",
                 "csrf_token": get_csrf_token(request),
                 "error": error,
                 "username": username,
@@ -113,6 +113,6 @@ async def login_page(request: Request):
         request=request,
         name="login.html",
         context={
-            "page_title": "登录 · 山雀群管",
+            "page_title": "登录 · 黑猫群管",
         },
     )

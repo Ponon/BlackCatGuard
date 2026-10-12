@@ -24,7 +24,7 @@ async def lifespan(app: FastAPI):
 
 # 创建实例
 app = FastAPI(
-    title="山雀群管",
+    title="黑猫群管",
     lifespan=lifespan,
 )
 
@@ -33,7 +33,7 @@ app = FastAPI(
 app.add_middleware(
     SessionMiddleware,
     secret_key=load_session_secret(),
-    session_cookie="titguard_session",
+    session_cookie="blackcatguard_session",
     same_site="strict",
     max_age=8 * 60 * 60,
     https_only=False,
