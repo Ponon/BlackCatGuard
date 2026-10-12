@@ -2,10 +2,8 @@ from pathlib import Path
 
 from tortoise import Tortoise
 
-from models import Administrator
 
-
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR = Path(__file__).resolve().parent.parent
 DATABASE_PATH = BASE_DIR / "data" / "titguard.db"
 
 
@@ -16,7 +14,7 @@ async def init_db():
     await Tortoise.init(
         db_url=f"sqlite://{DATABASE_PATH.as_posix()}",
         modules={
-            "models": ["models"],
+            "models": ["dao.models"],
         },
         use_tz=False,
         timezone="UTC",
@@ -29,17 +27,3 @@ async def init_db():
 # 程序关闭时释放数据库连接。
 async def close_db():
     await Tortoise.close_connections()
-
-
-# 检查是否已经有管理员。
-async def has_admin() -> bool:
-    return await Administrator.exists()
-
-
-# 创建管理员。
-async def create_admin(username: str, password_hash: str):
-    return await Administrator.create(
-        id=1,
-        username=username,
-        password_hash=password_hash,
-    )

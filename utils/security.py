@@ -5,7 +5,7 @@ from pathlib import Path
 from fastapi import Request
 
 
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_PATH = BASE_DIR / "data" / "session.key"
 
 

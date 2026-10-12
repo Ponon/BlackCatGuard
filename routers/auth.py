@@ -2,13 +2,13 @@ import re
 from tortoise.exceptions import IntegrityError
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
-from database import create_admin, has_admin
-from security import (
+from dao.models import Administrator
+from utils.security import (
     get_csrf_token,
     hash_password,
     valid_csrf_token,
 )
-from views import templates
+from utils.views import templates
 
 router = APIRouter()
 
@@ -17,7 +17,7 @@ router = APIRouter()
 @router.get("/setup", response_class=HTMLResponse)
 async def setup_page(request: Request):
     # 已有管理员，跳转到登录页面。
-    if await has_admin():
+    if await Administrator.exists():
         return RedirectResponse("/login", status_code=303)
 
     # 没有管理员，显示创建管理员页面。
@@ -44,7 +44,7 @@ async def setup_submit(
         csrf_token: str = Form(...),
 ):
     # 防止重复创建管理员。
-    if await has_admin():
+    if await Administrator.exists():
         return RedirectResponse("/login", status_code=303)
 
     # 验证表单校验码。
@@ -83,13 +83,14 @@ async def setup_submit(
 
     # 检查通过：将密码转换为哈希，然后保存管理员。
     try:
-        await create_admin(
+        await Administrator.create(
+            id=1,
             username=username,
             password_hash=hash_password(password),
         )
     except IntegrityError:
         # 另一个请求可能已经创建了管理员。
-        if await has_admin():
+        if await Administrator.exists():
             return RedirectResponse("/login", status_code=303)
 
         raise
@@ -105,7 +106,7 @@ async def setup_submit(
 @router.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
     # 没有管理员，先去创建。
-    if not await has_admin():
+    if not await Administrator.exists():
         return RedirectResponse("/setup", status_code=303)
 
     return templates.TemplateResponse(
