@@ -1,6 +1,5 @@
 import re
-import sqlite3
-
+from tortoise.exceptions import IntegrityError
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from database import create_admin, has_admin
@@ -16,9 +15,9 @@ router = APIRouter()
 
 # 打开初始化页面
 @router.get("/setup", response_class=HTMLResponse)
-def setup_page(request: Request):
+async def setup_page(request: Request):
     # 已有管理员，跳转到登录页面。
-    if has_admin():
+    if await has_admin():
         return RedirectResponse("/login", status_code=303)
 
     # 没有管理员，显示创建管理员页面。
@@ -36,7 +35,7 @@ def setup_page(request: Request):
 
 # 接收创建管理员的表单
 @router.post("/setup", response_class=HTMLResponse)
-def setup_submit(
+async def setup_submit(
         request: Request,
         # 读取 HTML 表单中对应 name 的字段。
         username: str = Form(...),
@@ -45,7 +44,7 @@ def setup_submit(
         csrf_token: str = Form(...),
 ):
     # 防止重复创建管理员。
-    if has_admin():
+    if await has_admin():
         return RedirectResponse("/login", status_code=303)
 
     # 验证表单校验码。
@@ -84,16 +83,15 @@ def setup_submit(
 
     # 检查通过：将密码转换为哈希，然后保存管理员。
     try:
-        create_admin(
+        await create_admin(
             username=username,
             password_hash=hash_password(password),
         )
-    except sqlite3.IntegrityError:
-        # 同时提交的另一个请求可能已经创建成功。
-        if has_admin():
+    except IntegrityError:
+        # 另一个请求可能已经创建了管理员。
+        if await has_admin():
             return RedirectResponse("/login", status_code=303)
 
-        # 如果不是这个原因，就继续报告数据库错误。
         raise
 
     # 创建成功，清除初始化会话。
@@ -105,9 +103,9 @@ def setup_submit(
 
 # 打开登录页面
 @router.get("/login", response_class=HTMLResponse)
-def login_page(request: Request):
+async def login_page(request: Request):
     # 没有管理员，先去创建。
-    if not has_admin():
+    if not await has_admin():
         return RedirectResponse("/setup", status_code=303)
 
     return templates.TemplateResponse(
