@@ -8,6 +8,7 @@
 	</head>
 	<body>
 		<main class="container">
+			<img class="container_logo" src="{{ url_for('static', path='/images/logo.svg') }}"/>
 			<p class="container_title">创建管理员</p>
 			<p class="container_brief">该账号用于登录黑猫群管后台。</p>
 
@@ -17,25 +18,27 @@
 
 			<form method="post" action="/setup" class="setup_input" autocomplete="off">
 				<input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-
-				<div class="setup_input_1">
-					<label for="username">账号</label>
-					<input id="username" name="username" value="{{ username }}" autocomplete="username"
-						pattern="[A-Za-z0-9_]{3,32}" minlength="3" maxlength="32" placeholder="请输入账号" required>
+				
+				<div class="setup_input_list">
+					<div class="setup_input_list_item">
+						<img src="{{ url_for('static', path='/images/username.svg') }}" alt="" />
+						<input id="username" name="username" value="{{ username }}" autocomplete="username"
+							pattern="[A-Za-z0-9_]{3,32}" minlength="3" maxlength="32" placeholder="请输入账号" required>
+					</div>
+					
+					<div class="setup_input_list_item">
+						<img src="{{ url_for('static', path='/images/username.svg') }}" alt="" />
+						<input id="password" type="password" name="password" placeholder="请输入密码" autocomplete="new-password"
+							minlength="8" maxlength="128" required>
+					</div>
+					
+					<div class="setup_input_list_item">
+						<img src="{{ url_for('static', path='/images/password.svg') }}" alt="" />
+						<input id="confirm_password" type="password" name="confirm_password" placeholder="再次输入密码"
+							autocomplete="new-password" minlength="8" maxlength="128" required>
+					</div>
 				</div>
-
-				<div>
-					<label for="password">密码</label>
-					<input id="password" type="password" name="password" placeholder="请输入密码" autocomplete="new-password" minlength="8"
-						maxlength="128" required>
-				</div>
-
-				<div>
-					<label for="confirm_password">确认密码</label>
-					<input id="confirm_password" type="password" name="confirm_password" placeholder="再次输入密码" autocomplete="new-password"
-						minlength="8" maxlength="128" required>
-				</div>
-
+			
 				<button type="submit" class="setup_input_btn">立即创建</button>
 			</form>
 		</main>

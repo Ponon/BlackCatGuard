@@ -1,18 +1,40 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ page_title }}</title>
-    <link
-        rel="stylesheet"
-        href="{{ url_for('static', path='/css/style.css') }}"
-    >
-</head>
-<body>
-    <main class="container">
-    <h1>登录黑猫群管</h1>
-    <p>请输入管理员账号和密码。</p>
-</main>
-</body>
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>{{ page_title }}</title>
+		<link rel="stylesheet" href="{{ url_for('static', path='/css/setup.css') }}">
+	</head>
+	<body>
+		<main class="container">
+			<img class="container_logo" src="{{ url_for('static', path='/images/logo.svg') }}"/>
+			<p class="container_title">登陆</p>
+			<p class="container_brief">请登录管理员账号。</p>
+
+			{% if error %}
+			<p role="alert">{{ error }}</p>
+			{% endif %}
+
+			<form method="post" action="/login" class="setup_input">
+				<input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+				<div class="setup_input_list">
+					<div class="setup_input_list_item">
+						<img src="{{ url_for('static', path='/images/username.svg') }}" alt="" />
+						<input id="username" name="username" value="{{ username }}" autocomplete="username"
+							pattern="[A-Za-z0-9_]{3,32}" minlength="3" maxlength="32" placeholder="请输入账号" required>
+					</div>
+
+					<div class="setup_input_list_item">
+						<img src="{{ url_for('static', path='/images/username.svg') }}" alt="" />
+						<input id="password" type="password" name="password" placeholder="请输入密码" autocomplete="current-password"
+							minlength="8" maxlength="128" required>
+					</div>
+				</div>
+
+				<button type="submit" class="setup_input_btn">立即登录</button>
+			</form>
+		</main>
+	</body>
 </html>

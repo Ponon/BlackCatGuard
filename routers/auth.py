@@ -7,6 +7,7 @@ from utils.security import (
     get_csrf_token,
     hash_password,
     valid_csrf_token,
+    verify_password,
 )
 from utils.views import templates
 
@@ -109,10 +110,50 @@ async def login_page(request: Request):
     if not await Administrator.exists():
         return RedirectResponse("/setup", status_code=303)
 
+    if await Administrator.filter(id=request.session.get("admin_id")).exists():
+        return RedirectResponse("/", status_code=303)
+
     return templates.TemplateResponse(
         request=request,
         name="login.html",
         context={
             "page_title": "登录 · 黑猫群管",
+            "csrf_token": get_csrf_token(request),
+            "error": "",
+            "username": "",
         },
     )
+
+
+@router.post("/login", response_class=HTMLResponse)
+async def login_submit(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+    csrf_token: str = Form(...),
+):
+    if not await Administrator.exists():
+        return RedirectResponse("/setup", status_code=303)
+
+    if not valid_csrf_token(request, csrf_token):
+        raise HTTPException(status_code=403, detail="表单已过期，请刷新页面后重试。")
+
+    username = username.strip()
+    admin = await Administrator.get_or_none(username=username)
+    if admin is None or not verify_password(password, admin.password_hash):
+        return templates.TemplateResponse(
+            request=request,
+            name="login.html",
+            context={
+                "page_title": "登录 · 黑猫群管",
+                "csrf_token": get_csrf_token(request),
+                "error": "账号或密码错误。",
+                "username": username,
+            },
+            status_code=401,
+        )
+
+    # 清除旧会话，登录后只保存管理员身份。
+    request.session.clear()
+    request.session["admin_id"] = admin.id
+    return RedirectResponse("/", status_code=303)

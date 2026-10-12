@@ -36,6 +36,20 @@ def hash_password(password: str) -> str:
     return f"scrypt${salt.hex()}${digest.hex()}"
 
 
+def verify_password(password: str, password_hash: str) -> bool:
+    try:
+        algorithm, salt, expected = password_hash.split("$")
+        if algorithm != "scrypt":
+            return False
+        digest = hashlib.scrypt(
+            password.encode("utf-8"), salt=bytes.fromhex(salt),
+            n=16384, r=8, p=1,
+        )
+        return secrets.compare_digest(digest, bytes.fromhex(expected))
+    except (ValueError, TypeError):
+        return False
+
+
 def get_csrf_token(request: Request) -> str:
     if "csrf_token" not in request.session:
         request.session["csrf_token"] = secrets.token_urlsafe(32)
