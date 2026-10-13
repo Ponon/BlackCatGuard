@@ -53,14 +53,58 @@
 
 ## 快速开始
 
-### Docker Compose 部署
+### 镜像部署与群晖
+
+维护者首次发布镜像并设为 Public 后，用户只需以下 Compose 配置，无需下载源码。镜像地址为 `ghcr.io/ponon/blackcatguard:latest`，支持 Linux amd64 和 arm64。
+
+```yaml
+services:
+  blackcatguard:
+    image: ghcr.io/ponon/blackcatguard:latest
+    restart: unless-stopped
+    init: true
+    ports:
+      - "${BIND_ADDRESS:-0.0.0.0}:${PORT:-1777}:1777"
+    volumes:
+      - data:/app/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  data:
+```
+
+**群晖**：Container Manager → 项目 → 新增，名称填写 `blackcatguard`，路径选择一个空目录，例如 `/volume1/docker/BlackCatGuard`，来源选择“创建 docker-compose.yml”，粘贴上方内容并启动。不需要上传 Dockerfile 或 Python 代码。启动完成后访问 `http://群晖IP:1777`。
+
+普通服务器将上述内容保存为 `docker-compose.yml` 后运行 `docker compose up -d`。更新镜像使用 `docker compose pull`，再运行 `docker compose up -d`。数据保存在项目的数据卷中，不要删除该卷。
+
+本仓库同时提供两套配置：`docker-compose.yml` 用于拉取已发布镜像；`compose.yaml` 用于源码构建。**在完整源码目录内运行命令时必须显式选择文件**，镜像部署使用 `docker compose -f docker-compose.yml up -d`，源码构建使用 `docker compose -f compose.yaml up -d --build`，避免工具默认选中另一套配置。
+
+### 维护者发布镜像
+
+1. 将包含 `.github/workflows/publish-image.yml` 的代码推送到 `main`
+2. 在 GitHub 仓库的 Actions 中查看 **Publish Docker image**，两种架构的测试与容器启动检查通过后才会发布
+3. 首次发布后进入 GitHub 个人主页 → Packages → `blackcatguard` → Package settings → Change visibility，将包设为 **Public**，之后用户可以免登录拉取
+4. `main` 更新自动发布 `latest` 与提交 SHA 标签；推送 `v1.0.0` 等版本标签会发布 `1.0.0`、`1.0` 和 SHA 标签，不覆盖 `latest`
+
+工作流使用 GitHub 自动提供的 `GITHUB_TOKEN`，无需手动填写 Docker Hub 密码或个人 Token。如果提示包权限不足，检查仓库 Actions 权限、组织策略及该包的 Actions 仓库访问权限。[GitHub 官方发布说明](https://docs.github.com/en/actions/tutorials/publish-packages/publish-docker-images)
+
+首次工作流成功前，镜像部署方式尚不可用；请以 Actions 运行结果和 Packages 中实际出现的镜像为准。PR 只执行测试和构建，不发布镜像。部署公开镜像的说明见 [GHCR 文档](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)。
+
+### 从源码构建 Docker 镜像
 
 先安装 [Docker Engine 与 Compose 插件](https://docs.docker.com/engine/install/) 或 Docker Desktop，无需在宿主机安装 Python 和数据库。
 
 ```bash
 git clone https://github.com/Ponon/BlackCatGuard.git
 cd BlackCatGuard
-docker compose up -d --build
+docker compose -f compose.yaml up -d --build
 ```
 
 访问 `http://服务器IP:1777`，首次使用同意须知并创建管理员，然后按照下方“首次配置”完成设置。本机部署访问 `http://127.0.0.1:1777`。服务需能访问 Telegram，也可以在网页系统设置中配置代理。
@@ -69,15 +113,15 @@ docker compose up -d --build
 
 ```bash
 # 查看启动状态与容器输出
-docker compose ps
-docker compose logs --tail=100 -f
+docker compose -f compose.yaml ps
+docker compose -f compose.yaml logs --tail=100 -f
 
 # 停止 / 启动
-docker compose stop
-docker compose start
+docker compose -f compose.yaml stop
+docker compose -f compose.yaml start
 ```
 
-端口默认 1777，可通过 `PORT=1888 docker compose up -d` 调整宿主机端口。若使用宿主机 HTTPS 反向代理，可用 `BIND_ADDRESS=127.0.0.1 docker compose up -d` 仅监听本机；长期自定义请在项目根目录的 `.env` 中保存 `PORT=1777` 与 `BIND_ADDRESS=127.0.0.1` 等值。公网访问建议配置 HTTPS，并限制管理页面的访问范围。
+端口默认 1777，可通过 `PORT=1888 docker compose -f compose.yaml up -d` 调整宿主机端口。若使用宿主机 HTTPS 反向代理，可用 `BIND_ADDRESS=127.0.0.1 docker compose -f compose.yaml up -d` 仅监听本机；长期自定义请在项目根目录的 `.env` 中保存 `PORT=1777` 与 `BIND_ADDRESS=127.0.0.1` 等值。公网访问建议配置 HTTPS，并限制管理页面的访问范围。
 
 **代理地址**：容器中的 `127.0.0.1` 指容器自身。使用宿主机代理时，网页中填写 `http://host.docker.internal:代理端口`，并让代理监听容器可以访问的地址；使用其他服务器的代理则填写其实际地址。Bark 推送始终直连。
 
@@ -86,23 +130,23 @@ docker compose start
 升级前停止服务并备份整个 `data` 目录，包含 SQLite 数据库与登录密钥。备份含机器人与接口凭据，请妥善保存。以下备份目录使用不同名称以避免覆盖旧备份：
 
 ```bash
-docker compose stop
+docker compose -f compose.yaml stop
 mkdir -p backups
-docker compose cp blackcatguard:/app/data ./backups/data-before-upgrade
+docker compose -f compose.yaml cp blackcatguard:/app/data ./backups/data-before-upgrade
 git pull --ff-only
-docker compose up -d --build
+docker compose -f compose.yaml up -d --build
 ```
 
-升级会自动迁移已有数据库，不需要重新初始化。不要启动多个实例共用同一群组，也不要运行 `docker compose down -v`，该命令会删除持久化数据卷。[Docker 数据卷说明](https://docs.docker.com/engine/storage/volumes/)
+升级会自动迁移已有数据库，不需要重新初始化。不要启动多个实例共用同一群组，也不要运行 `docker compose -f compose.yaml down -v`，该命令会删除持久化数据卷。[Docker 数据卷说明](https://docs.docker.com/engine/storage/volumes/)
 
 恢复备份时先停止服务，确保容器已创建，再复制数据并修正文件归属：
 
 ```bash
-docker compose stop
-docker compose create
-docker compose cp ./backups/data-before-upgrade/. blackcatguard:/app/data/
-docker compose run --rm --no-deps --user 0 --entrypoint chown blackcatguard -R 10001:10001 /app/data
-docker compose up -d
+docker compose -f compose.yaml stop
+docker compose -f compose.yaml create
+docker compose -f compose.yaml cp ./backups/data-before-upgrade/. blackcatguard:/app/data/
+docker compose -f compose.yaml run --rm --no-deps --user 0 --entrypoint chown blackcatguard -R 10001:10001 /app/data
+docker compose -f compose.yaml up -d
 ```
 
 恢复操作会覆盖当前同名数据文件，应恢复到兼容该备份的应用版本。健康检查用于确认管理网页能响应，Telegram 连接状态以工作台显示为准；容器标记 unhealthy 不会自动重启，进程退出才由重启策略处理。
