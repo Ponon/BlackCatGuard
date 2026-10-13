@@ -2,11 +2,14 @@ name: blackcatguard
 
 services:
   blackcatguard:
+    container_name: blackcatguard
     build: .
+    environment:
+      APP_ACCESS_URL: "http://${ACCESS_HOST:-宿主机IP}:${PORT:-1777}"
     restart: unless-stopped
     init: true
     ports:
-      - "${BIND_ADDRESS:-0.0.0.0}:${PORT:-1777}:1777"
+      - "${PORT:-1777}:1777"
     volumes:
       - data:/app/data
     extra_hosts:

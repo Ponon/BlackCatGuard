@@ -53,18 +53,23 @@
 
 ## 快速开始
 
-### 镜像部署与群晖
+任选一种方式启动，默认端口为 **1777**。
 
-维护者首次发布镜像并设为 Public 后，用户只需以下 Compose 配置，无需下载源码。镜像地址为 `ghcr.io/ponon/blackcatguard:latest`，支持 Linux amd64 和 arm64。
+### 方式一：Docker 镜像部署
+
+将以下内容保存为 `docker-compose.yml`，也可以直接粘贴到支持 Compose 的容器管理面板：
 
 ```yaml
 services:
   blackcatguard:
+    container_name: blackcatguard
     image: ghcr.io/ponon/blackcatguard:latest
+    environment:
+      APP_ACCESS_URL: "http://${ACCESS_HOST:-宿主机IP}:${PORT:-1777}"
     restart: unless-stopped
     init: true
     ports:
-      - "${BIND_ADDRESS:-0.0.0.0}:${PORT:-1777}:1777"
+      - "${PORT:-1777}:1777"
     volumes:
       - data:/app/data
     extra_hosts:
@@ -80,26 +85,27 @@ volumes:
   data:
 ```
 
-**群晖**：Container Manager → 项目 → 新增，名称填写 `blackcatguard`，路径选择一个空目录，例如 `/volume1/docker/BlackCatGuard`，来源选择“创建 docker-compose.yml”，粘贴上方内容并启动。不需要上传 Dockerfile 或 Python 代码。启动完成后访问 `http://群晖IP:1777`。
+```bash
+docker compose -f docker-compose.yml up -d
+```
 
-普通服务器将上述内容保存为 `docker-compose.yml` 后运行 `docker compose up -d`。更新镜像使用 `docker compose pull`，再运行 `docker compose up -d`。数据保存在项目的数据卷中，不要删除该卷。
+启动日志中的容器访问地址通过 `ACCESS_HOST` 和 `PORT` 设置，两者也用于生成对应的外部访问地址。例如在 Compose 文件旁的 `.env` 中填写：
 
-本仓库同时提供两套配置：`docker-compose.yml` 用于拉取已发布镜像；`compose.yaml` 用于源码构建。**在完整源码目录内运行命令时必须显式选择文件**，镜像部署使用 `docker compose -f docker-compose.yml up -d`，源码构建使用 `docker compose -f compose.yaml up -d --build`，避免工具默认选中另一套配置。
+```dotenv
+ACCESS_HOST=192.168.1.10
+PORT=1888
+```
 
-### 维护者发布镜像
+此时端口映射为 `1888:1777`，日志显示 `http://192.168.1.10:1888`。未设置主机地址时日志使用“宿主机IP”占位。容器无法自动获知宿主机映射信息；若手动修改 YAML 端口，请同步修改 `APP_ACCESS_URL`。使用 HTTPS 反向代理时可将 `APP_ACCESS_URL` 直接填写为实际访问网址。
 
-1. 将包含 `.github/workflows/publish-image.yml` 的代码推送到 `main`
-2. 在 GitHub 仓库的 Actions 中查看 **Publish Docker image**，两种架构的测试与容器启动检查通过后才会发布
-3. 首次发布后进入 GitHub 个人主页 → Packages → `blackcatguard` → Package settings → Change visibility，将包设为 **Public**，之后用户可以免登录拉取
-4. `main` 更新自动发布 `latest` 与提交 SHA 标签；推送 `v1.0.0` 等版本标签会发布 `1.0.0`、`1.0` 和 SHA 标签，不覆盖 `latest`
+访问 `http://服务器IP:1777`。配置与数据库保存在独立数据卷中，更新镜像不会清空数据。更新命令：
 
-工作流使用 GitHub 自动提供的 `GITHUB_TOKEN`，无需手动填写 Docker Hub 密码或个人 Token。如果提示包权限不足，检查仓库 Actions 权限、组织策略及该包的 Actions 仓库访问权限。[GitHub 官方发布说明](https://docs.github.com/en/actions/tutorials/publish-packages/publish-docker-images)
+```bash
+docker compose -f docker-compose.yml pull
+docker compose -f docker-compose.yml up -d
+```
 
-首次工作流成功前，镜像部署方式尚不可用；请以 Actions 运行结果和 Packages 中实际出现的镜像为准。PR 只执行测试和构建，不发布镜像。部署公开镜像的说明见 [GHCR 文档](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)。
-
-### 从源码构建 Docker 镜像
-
-先安装 [Docker Engine 与 Compose 插件](https://docs.docker.com/engine/install/) 或 Docker Desktop，无需在宿主机安装 Python 和数据库。
+### 方式二：从源码构建 Docker 镜像
 
 ```bash
 git clone https://github.com/Ponon/BlackCatGuard.git
@@ -107,79 +113,32 @@ cd BlackCatGuard
 docker compose -f compose.yaml up -d --build
 ```
 
-访问 `http://服务器IP:1777`，首次使用同意须知并创建管理员，然后按照下方“首次配置”完成设置。本机部署访问 `http://127.0.0.1:1777`。服务需能访问 Telegram，也可以在网页系统设置中配置代理。
+访问 `http://服务器IP:1777`。
 
-当前从源码本地构建镜像，无需拉取项目预构建镜像。容器使用 Python 3.13、非 root 用户、单 worker，数据库和登录密钥保存在 Docker 数据卷中，重建容器后继续保留。默认在 Docker 启动后自动运行，手动停止后保持停止。
+### 方式三：Python 直接运行
 
-```bash
-# 查看启动状态与容器输出
-docker compose -f compose.yaml ps
-docker compose -f compose.yaml logs --tail=100 -f
-
-# 停止 / 启动
-docker compose -f compose.yaml stop
-docker compose -f compose.yaml start
-```
-
-端口默认 1777，可通过 `PORT=1888 docker compose -f compose.yaml up -d` 调整宿主机端口。若使用宿主机 HTTPS 反向代理，可用 `BIND_ADDRESS=127.0.0.1 docker compose -f compose.yaml up -d` 仅监听本机；长期自定义请在项目根目录的 `.env` 中保存 `PORT=1777` 与 `BIND_ADDRESS=127.0.0.1` 等值。公网访问建议配置 HTTPS，并限制管理页面的访问范围。
-
-**代理地址**：容器中的 `127.0.0.1` 指容器自身。使用宿主机代理时，网页中填写 `http://host.docker.internal:代理端口`，并让代理监听容器可以访问的地址；使用其他服务器的代理则填写其实际地址。Bark 推送始终直连。
-
-#### 升级与备份
-
-升级前停止服务并备份整个 `data` 目录，包含 SQLite 数据库与登录密钥。备份含机器人与接口凭据，请妥善保存。以下备份目录使用不同名称以避免覆盖旧备份：
-
-```bash
-docker compose -f compose.yaml stop
-mkdir -p backups
-docker compose -f compose.yaml cp blackcatguard:/app/data ./backups/data-before-upgrade
-git pull --ff-only
-docker compose -f compose.yaml up -d --build
-```
-
-升级会自动迁移已有数据库，不需要重新初始化。不要启动多个实例共用同一群组，也不要运行 `docker compose -f compose.yaml down -v`，该命令会删除持久化数据卷。[Docker 数据卷说明](https://docs.docker.com/engine/storage/volumes/)
-
-恢复备份时先停止服务，确保容器已创建，再复制数据并修正文件归属：
-
-```bash
-docker compose -f compose.yaml stop
-docker compose -f compose.yaml create
-docker compose -f compose.yaml cp ./backups/data-before-upgrade/. blackcatguard:/app/data/
-docker compose -f compose.yaml run --rm --no-deps --user 0 --entrypoint chown blackcatguard -R 10001:10001 /app/data
-docker compose -f compose.yaml up -d
-```
-
-恢复操作会覆盖当前同名数据文件，应恢复到兼容该备份的应用版本。健康检查用于确认管理网页能响应，Telegram 连接状态以工作台显示为准；容器标记 unhealthy 不会自动重启，进程退出才由重启策略处理。
-
-### 源码部署环境准备
-
-- Python **3.13**
-- 能访问 Telegram 的网络，或可用的 HTTP/HTTPS 代理
-- 一个通过 [BotFather](https://t.me/BotFather) 创建的机器人
-- 一个 Telegram 超级群组，并将机器人设置为管理员
-
-以下命令适用于 macOS / Linux：
+需要 Python **3.13**，以下命令适用于 Linux / macOS：
 
 ```bash
 git clone https://github.com/Ponon/BlackCatGuard.git
 cd BlackCatGuard
-
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
-.venv/bin/python -m uvicorn main:app --host 127.0.0.1 --port 1777 --workers 1
+.venv/bin/python -m uvicorn main:app --host 0.0.0.0 --port 1777 --workers 1
 ```
 
-打开 **<http://127.0.0.1:1777>**，首次访问时创建管理员账号。
+访问 `http://服务器IP:1777`，本机使用 `http://127.0.0.1:1777`。正式运行使用单实例、单 worker，不启用热重载。
 
 ### 首次配置
 
-1. 在 **群管理** 填写 Bot Token 和负数群 ID，例如 `-1001234567890`
-2. 授予机器人删除消息、限制成员及邀请成员等所需管理员权限
-3. 如需代理，先到 **系统设置** 保存代理地址，再检测群配置
-4. 检测通过后，按需配置并启用入群验证、欢迎语和广告拦截
-5. 在 **群广播** 新建内容、保存循环规则，再从任务列表开启广播
+1. 同意使用须知并创建管理员账号
+2. 如需代理，在系统设置中保存 HTTP/HTTPS 代理地址
+3. 在群管理中填写 Bot Token 与群 ID，将机器人设为群管理员并检测连接
+4. 按需开启入群验证、欢迎语、广告拦截及广播任务
 
-正式运行时使用一个应用实例和一个 worker，不启用 `--reload`。需要公网访问时，可在前面配置 HTTPS 反向代理；上述命令默认只监听本机。
+Docker 内的 `127.0.0.1` 指容器自身；使用宿主机代理时填写 `http://host.docker.internal:代理端口`，并确保代理允许容器访问。Bark 始终直连。
+
+域名解析不会自动开放端口。外网访问需配置对应的端口转发或 HTTPS 反向代理，并放行防火墙。不要删除持久化数据卷，备份方法见下文“数据与备份”。
 
 ## 使用说明
 

@@ -8,6 +8,11 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates tzdata \
     && rm -rf /var/lib/apt/lists/*
 
+ARG APP_VERSION=development
+ARG APP_REVISION=unknown
+ENV APP_VERSION=${APP_VERSION} \
+    APP_REVISION=${APP_REVISION}
+
 WORKDIR /app
 
 COPY requirements.txt ./

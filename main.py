@@ -3,7 +3,7 @@ import asyncio
 import uvicorn
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from dao.database import init_db, close_db
+from dao.database import init_db, close_db, DATABASE_PATH
 from routers import auth, pages, group, settings, verification, antispam, events, broadcast
 from utils.views import BASE_DIR
 from starlette.middleware.sessions import SessionMiddleware
@@ -15,12 +15,14 @@ from services.background import supervise
 from services.moderation import run_moderation_worker
 from services.notifications import run_push_worker
 from services.log_retention import run_log_cleanup
+from services.startup import log_startup
 
 
 # 生命周期管理
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 启动时初始化数据库。
+    database_existed = DATABASE_PATH.is_file()
     await init_db()
     workers = [
         asyncio.create_task(supervise(service, name), name=name)
@@ -34,6 +36,7 @@ async def lifespan(app: FastAPI):
         )
     ]
     try:
+        await log_startup(database_existed=database_existed)
         yield
     finally:
         for worker in workers:
