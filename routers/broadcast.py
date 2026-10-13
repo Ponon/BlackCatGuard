@@ -78,7 +78,7 @@ async def broadcast_page(request: Request):
     for value in task_values:
         value['enabled'] = bool(configured and value['enabled'])
     return templates.TemplateResponse(request=request, name='broadcast.html', context={
-        'page_title': '群广播 · 黑猫群管', 'active_page': 'broadcast',
+        'page_title': '群广播 - 黑猫群管', 'active_page': 'broadcast',
         'username': admin.username, 'csrf_token': get_csrf_token(request),
         'group_configured': configured, 'contents': [content_data(content) for content in contents],
         'tasks': task_values,

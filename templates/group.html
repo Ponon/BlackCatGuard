@@ -6,7 +6,7 @@
         <title>{{ page_title }}</title>
         <link rel="icon" type="image/svg+xml" href="{{ url_for('static', path='/images/logo.svg').path }}">
         <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css').path }}?v=11">
-        <link rel="stylesheet" href="{{ url_for('static', path='/css/group.css').path }}?v=8">
+        <link rel="stylesheet" href="{{ url_for('static', path='/css/group.css').path }}?v=4">
         <link rel="stylesheet" href="{{ url_for('static', path='/css/toast.css').path }}">
         <script src="{{ url_for('static', path='/js/toast.js').path }}?v=30261012-4" defer></script>
         <script src="{{ url_for('static', path='/js/dashboard.js').path }}" defer></script>
@@ -69,7 +69,16 @@
                                 </div>
                                 <label class="field-label" for="chat-id">群 ID</label>
                                 <input class="config-input" id="chat-id" name="chat_id" type="text" maxlength="32" value="{{ chat_id }}" placeholder="例如 -1001234567890" autocomplete="off" spellcheck="false" required>
-                                <p class="field-help">填写数字 ID，通常以 -100 开头；不支持群邀请链接。</p>
+                                <div class="field-help">填写数字 ID，通常以 -100 开头；不支持群邀请链接。
+                                    <details class="group-id-help">
+                                        <summary>如何获取群 ID</summary>
+                                        <div class="group-id-guide">
+                                            <p>方法一：打开 <a href="https://web.telegram.org/a/" target="_blank" rel="noopener noreferrer">Telegram 网页版</a>，进入目标群。如果地址栏显示 <code>#-1001234567890</code>，复制其中完整的负数 <code>-1001234567890</code>。</p>
+                                            <p>方法二：打开 <a href="https://t.me/RawDataBot" target="_blank" rel="noopener noreferrer">RawDataBot</a>，将其加入目标群并发送 <code>/start@RawDataBot</code>，查看回复中的 <code>chat.id</code>。获取后可将其移出群组。</p>
+                                            <p>请复制群组的 <code>chat.id</code>，不要复制用户的 <code>from.id</code> 或消息的 <code>message_id</code>。RawDataBot 是第三方工具，无需向其提供你的 Bot Token。</p>
+                                        </div>
+                                    </details>
+                                </div>
                             </div>
                             <div class="config-actions">
                                 <button class="button button--primary" type="submit" id="save-config">保存配置</button>

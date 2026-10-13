@@ -38,7 +38,7 @@ async def setup_consent(request: Request, csrf_token: str = Form(...),
         if "application/json" in request.headers.get("accept", ""):
             return JSONResponse({"error": "请阅读并同意当前使用须知"}, status_code=400)
         return templates.TemplateResponse(request=request, name="setup.html", context={
-            "page_title": "初始化 · 黑猫群管", "csrf_token": get_csrf_token(request),
+            "page_title": "初始化 - 黑猫群管", "csrf_token": get_csrf_token(request),
             "error": "请阅读并同意当前使用须知", "username": "",
             "step": "terms", "terms_version": TERMS_VERSION,
         }, status_code=400)
@@ -61,7 +61,7 @@ async def setup_page(request: Request):
         request=request,
         name="setup.html",
         context={
-            "page_title": "初始化 · 黑猫群管",
+            "page_title": "初始化 - 黑猫群管",
             "csrf_token": get_csrf_token(request),
             "error": "",
             "username": "",
@@ -121,7 +121,7 @@ async def setup_submit(
             request=request,
             name="setup.html",
             context={
-                "page_title": "初始化 · 黑猫群管",
+                "page_title": "初始化 - 黑猫群管",
                 "csrf_token": get_csrf_token(request),
                 "error": error,
                 "username": username,
@@ -172,7 +172,7 @@ async def login_page(request: Request):
         request=request,
         name="login.html",
         context={
-            "page_title": "登录 · 黑猫群管",
+            "page_title": "登录 - 黑猫群管",
             "csrf_token": get_csrf_token(request),
             # 普通表单提交的提示读取后即删除，刷新不会重复显示。
             "success": request.session.pop("success_message", ""),
@@ -210,7 +210,7 @@ async def login_submit(
             request=request,
             name="login.html",
             context={
-                "page_title": "登录 · 黑猫群管",
+                "page_title": "登录 - 黑猫群管",
                 "csrf_token": get_csrf_token(request),
                 "error": "账号或密码错误。",
                 "username": username,

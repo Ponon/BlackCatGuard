@@ -33,7 +33,7 @@ async def events_page(request: Request, page: int = 1, page_size: int = 10):
             'user_id': str(record.user_id) if record.user_id is not None else '', 'content': record.content, 'result': record.result,
         })
     return templates.TemplateResponse(request=request, name='events.html', context={
-        'page_title': '事件日志 · 黑猫群管', 'active_page': 'events',
+        'page_title': '事件日志 - 黑猫群管', 'active_page': 'events',
         'username': admin.username, 'csrf_token': get_csrf_token(request),
         'rows': rows, 'total': total, 'page': page, 'pages': pages,
         'page_size': page_size, 'page_sizes': PAGE_SIZES,

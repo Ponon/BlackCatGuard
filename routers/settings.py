@@ -53,7 +53,7 @@ async def settings_page(request: Request):
     return templates.TemplateResponse(
         request=request, name='settings.html',
         context={
-            'page_title': '系统设置 · 黑猫群管', 'active_page': 'settings',
+            'page_title': '系统设置 - 黑猫群管', 'active_page': 'settings',
             'username': admin.username, 'csrf_token': get_csrf_token(request),
             'proxy_url': settings.proxy_url if settings else '',
             'network_saved': settings is not None,

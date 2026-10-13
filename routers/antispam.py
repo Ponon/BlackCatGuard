@@ -44,7 +44,7 @@ async def antispam_page(request: Request):
     actions = await ModerationSettings.get_or_none(id=1)
     configured = await group_is_configured()
     return templates.TemplateResponse(request=request, name='antispam.html', context={
-        'page_title': '广告拦截 · 黑猫群管', 'active_page': 'antispam',
+        'page_title': '广告拦截 - 黑猫群管', 'active_page': 'antispam',
         'username': admin.username, 'csrf_token': get_csrf_token(request), 'group_configured': configured,
         'keyword_enabled': keyword_is_enabled(keyword, configured),
         'keywords': '\n'.join(keyword.keywords) if keyword else '',

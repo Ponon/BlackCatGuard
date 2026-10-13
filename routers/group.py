@@ -41,7 +41,7 @@ async def group_page(request: Request):
     return templates.TemplateResponse(
         request=request, name="group.html",
         context={
-            "page_title": "群管理 · 黑猫群管",
+            "page_title": "群管理 - 黑猫群管",
             "username": admin.username,
             "active_page": "group",
             "csrf_token": get_csrf_token(request),

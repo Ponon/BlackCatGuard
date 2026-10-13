@@ -145,7 +145,7 @@ class JoinTests(unittest.IsolatedAsyncioTestCase):
             return await original(group, method, **params)
         with patch('services.join_runtime.api', side_effect=fail_delete):
             await process_callback(self.group, self.callback(session))
-        self.assertEqual((await JoinSession.get()).state, 'passed')
+        self.assertEqual((await JoinSession.get()).state, 'passing')
         self.assertFalse(await EventLog.filter(event_type='入群欢迎').exists())
         await JoinSession.all().update(retry_at=0)
         await maintain(self.group)
@@ -208,6 +208,8 @@ class JoinTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual((await JoinSession.get(id=session.id)).state, 'done')
             methods = [method for method, params in self.calls]
             self.assertIn('restrictChatMember' if action == 'restrict' else 'banChatMember', methods)
+            self.assertLess(methods.index('deleteMessage'), methods.index('getChatMember'))
+            self.assertLess(methods.index('deleteMessage'), methods.index('restrictChatMember' if action == 'restrict' else 'banChatMember'))
             if action == 'kick':
                 self.assertIn('unbanChatMember', methods)
             self.assertNotIn('sendMessage', methods)
@@ -287,5 +289,43 @@ class JoinTests(unittest.IsolatedAsyncioTestCase):
         session = await JoinSession.get()
         self.calls.clear()
         await process_callback(self.group, self.callback(session))
+        methods = [method for method, params in self.calls]
+        self.assertLess(methods.index('deleteMessage'), methods.index('restrictChatMember'))
         restored = next(params for method, params in self.calls if method == 'restrictChatMember')
         self.assertEqual(json.loads(restored['permissions']), {'can_send_messages': True, 'can_send_photos': False})
+
+
+    async def test_timeout_deletes_prompt_before_member_action(self):
+        for index, action in enumerate(('kick', 'restrict'), 1000):
+            await VerificationSettings.all().update(timeout_action=action)
+            await process_join(self.group, self.event, index)
+            session = await JoinSession.get(state='pending')
+            await JoinSession.filter(id=session.id).update(deadline=time.time() - 1)
+            self.calls.clear()
+            await maintain(self.group)
+            methods = [method for method, params in self.calls]
+            self.assertLess(methods.index('deleteMessage'), methods.index('getChatMember'))
+            self.assertLess(methods.index('deleteMessage'), methods.index('banChatMember' if action == 'kick' else 'restrictChatMember'))
+
+    async def test_permission_retry_does_not_repeat_deleted_prompt(self):
+        from services.telegram import TelegramError
+        await process_join(self.group, self.event, 1100)
+        session = await JoinSession.get()
+        original = __import__('services.join_runtime', fromlist=['api']).api
+        async def fail_restore(group, method, **params):
+            if method == 'restrictChatMember':
+                raise TelegramError('网络波动', retryable=True)
+            return await original(group, method, **params)
+        self.calls.clear()
+        with patch('services.join_runtime.api', side_effect=fail_restore):
+            await process_callback(self.group, self.callback(session))
+        saved = await JoinSession.get()
+        self.assertIsNone(saved.message_id)
+        self.assertEqual(saved.state, 'passing')
+        await JoinSession.all().update(retry_at=0)
+        self.calls.clear()
+        await maintain(self.group)
+        methods = [method for method, params in self.calls]
+        self.assertNotIn('deleteMessage', methods)
+        self.assertIn('restrictChatMember', methods)
+        self.assertEqual((await JoinSession.get()).state, 'welcome')

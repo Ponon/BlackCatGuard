@@ -28,7 +28,7 @@ async def verification_page(request: Request):
     return templates.TemplateResponse(
         request=request, name='verification.html',
         context={
-            'page_title': '入群设置 · 黑猫群管', 'active_page': 'verification',
+            'page_title': '入群设置 - 黑猫群管', 'active_page': 'verification',
             'username': admin.username, 'csrf_token': get_csrf_token(request),
             'enabled': verification_is_enabled(settings, configured),
             'group_configured': configured,

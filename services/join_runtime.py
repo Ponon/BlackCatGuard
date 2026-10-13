@@ -94,6 +94,7 @@ async def advance(group, session):
         await change_state(session, 'pending', message_id=result['message_id'])
         await log(session, '等待验证')
     if session.state == 'passing':
+        await delete_message(group, session)
         # 恢复入群时群组默认权限，不额外授予管理员权限。
         await api(group, 'restrictChatMember', chat_id=session.chat_id, user_id=session.user_id,
                   permissions=json.dumps(session.permissions), use_independent_chat_permissions='true')
@@ -110,6 +111,7 @@ async def advance(group, session):
         settings = await VerificationSettings.get_or_none(id=1)
         await change_state(session, 'failed_action', failure_action=settings.timeout_action if settings else 'kick', failure_reason='验证超时')
     if session.state == 'failed_action':
+        await delete_message(group, session)
         member = await api(group, 'getChatMember', chat_id=session.chat_id, user_id=session.user_id)
         if member.get('status') in ('administrator', 'creator', 'left', 'kicked'):
             await change_state(session, 'failed_clean', failure_action='skip')
