@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import patch, AsyncMock
 from tortoise import Tortoise
 from dao.models import GroupConfig, KeywordSettings, AISettings, WhitelistSettings, ModerationJob, EventLog
-from services.moderation import enqueue_message, process_job, moderation_tick
+from services.moderation import enqueue_message, process_job, moderation_tick, member_can_be_moderated
 from services.telegram import TelegramError
 
 
@@ -17,9 +17,12 @@ class ModerationTests(unittest.IsolatedAsyncioTestCase):
         self.message = {'message_id': 10, 'chat': {'id': -1001}, 'from': {'id': 123, 'first_name': '小猫', 'username': 'cat'}, 'text': '这是广告'}
         self.gate = patch('services.moderation.execution_allowed', new_callable=AsyncMock, return_value=True)
         self.gate.start()
+        self.member_gate = patch('services.moderation.member_can_be_moderated', new_callable=AsyncMock, return_value=True)
+        self.member_gate.start()
 
     async def asyncTearDown(self):
         self.gate.stop()
+        self.member_gate.stop()
         await Tortoise.close_connections()
 
     async def enqueue(self, update_id=1):
@@ -36,7 +39,7 @@ class ModerationTests(unittest.IsolatedAsyncioTestCase):
         event = await EventLog.get()
         self.assertIn('关键词[广告]命中', event.result)
         self.assertIn('已删除消息', event.result)
-        self.assertEqual(event.username, '@cat')
+        self.assertEqual(event.user_id, 123)
         self.assertEqual(event.content, '这是广告')
 
     async def test_whitelist_skips_ai_and_delete(self):
@@ -47,7 +50,7 @@ class ModerationTests(unittest.IsolatedAsyncioTestCase):
             await process_job(job.id)
         ai.assert_not_called()
         api.assert_not_awaited()
-        self.assertEqual(await EventLog.all().count(), 0)
+        self.assertTrue(all(event.result.startswith('放行') for event in await EventLog.all()))
 
     async def test_ai_failure_never_deletes(self):
         from services.antispam import AIError
@@ -161,3 +164,72 @@ class ModerationTests(unittest.IsolatedAsyncioTestCase):
         self.message['edit_date'] = int(time.time())
         await enqueue_message(self.group, self.message, 2)
         self.assertEqual(await ModerationJob.all().count(), 1)
+
+
+    async def test_admin_and_owner_skip_keyword_ai_and_all_actions(self):
+        self.member_gate.stop()
+        for status in ('administrator', 'creator'):
+            job = await self.enqueue(10 if status == 'creator' else 9)
+            with patch('services.moderation.api', new_callable=AsyncMock, return_value={'status': status}) as api, patch('services.moderation.classify_message') as classify:
+                await process_job(job.id)
+            api.assert_awaited_once_with(self.group, 'getChatMember', chat_id='-1001', user_id=123)
+            classify.assert_not_called()
+            self.assertEqual((await ModerationJob.get(id=job.id)).state, 'done')
+        self.assertTrue(all(event.result.startswith('放行') for event in await EventLog.all()))
+
+    async def test_promotion_during_classification_prevents_deletion(self):
+        self.member_gate.stop()
+        job = await self.enqueue()
+        with patch('services.moderation.api', new_callable=AsyncMock, side_effect=[{'status': 'member'}, {'status': 'administrator'}]) as api:
+            await process_job(job.id)
+        self.assertEqual([call.args[1] for call in api.await_args_list], ['getChatMember', 'getChatMember'])
+        self.assertTrue(all(event.result.startswith('放行') for event in await EventLog.all()))
+
+    async def test_identity_lookup_failure_retries_without_deletion(self):
+        self.member_gate.stop()
+        job = await self.enqueue()
+        with patch('services.moderation.api', new_callable=AsyncMock, side_effect=TelegramError('网络波动', retryable=True)) as api:
+            for _ in range(3):
+                await ModerationJob.filter(id=job.id).update(available_at=0)
+                await process_job(job.id)
+        self.assertEqual([call.args[1] for call in api.await_args_list], ['getChatMember'] * 3)
+        self.assertEqual((await ModerationJob.get(id=job.id)).state, 'done')
+        self.assertIn('成员身份检测失败', (await EventLog.get()).result)
+
+
+    async def test_log_user_id_migration_preserves_and_backfills_known_identity(self):
+        from dao.database import migrate_event_user_ids
+        job = await self.enqueue()
+        old = await EventLog.create(event_type='广告拦截', flow_id=f'moderation:{job.id}', result='旧记录')
+        unknown = await EventLog.create(event_type='广告拦截', username='@unknown', result='无关联记录')
+        await migrate_event_user_ids()
+        await migrate_event_user_ids()
+        self.assertEqual((await EventLog.get(id=old.id)).user_id, 123)
+        self.assertIsNone((await EventLog.get(id=unknown.id)).user_id)
+        self.assertEqual((await EventLog.get(id=unknown.id)).username, '@unknown')
+
+
+    async def test_normal_messages_logged_once_without_notification(self):
+        from services.notifications import event_key
+        self.message['text'] = '大家早上好'
+        job = await self.enqueue()
+        await self.enqueue()
+        await process_job(job.id)
+        await process_job(job.id)
+        event = await EventLog.get()
+        self.assertEqual(event.content, '大家早上好')
+        self.assertEqual(event.user_id, 123)
+        self.assertTrue(event.result.startswith('放行'))
+        self.assertIsNone(event_key(event))
+
+    async def test_disabled_rules_and_media_still_record_messages(self):
+        await KeywordSettings.all().update(enabled=False)
+        await self.enqueue()
+        self.message['message_id'] = 11
+        self.message.pop('text')
+        self.message['photo'] = [{}]
+        await self.enqueue(2)
+        events = await EventLog.all().order_by('id')
+        self.assertEqual(len(events), 2)
+        self.assertEqual(events[1].content, '[图片]')
+        self.assertTrue(all(event.result.startswith('放行') for event in events))

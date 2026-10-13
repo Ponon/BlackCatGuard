@@ -63,10 +63,11 @@ class DashboardTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_recent_events_order_limit_escape_and_no_fake_counts(self):
         for index in range(7):
-            await EventLog.create(event_type='消息测试', username='<script>bad</script>', result=f'结果{index}')
+            await EventLog.create(event_type='消息测试', content='<script>bad</script>', user_id=123456789, result=f'结果{index}')
         data = await build_dashboard()
         self.assertEqual(len(data['events']), 5)
         self.assertEqual(data['events'][0]['result'], '结果6')
+        self.assertEqual(data['events'][0]['user_id'], '123456789')
         self.assertEqual(data['members_today'], '—')
         self.assertEqual(data['blocked_today'], '—')
         html = (await home(self.request)).body.decode()

@@ -128,7 +128,7 @@ async def build_dashboard():
             'time': display_time(item.created_at),
             'type': item.event_type,
             'nickname': item.nickname,
-            'username': item.username,
+            'user_id': str(item.user_id) if item.user_id is not None else '',
             'content': item.content,
             'result': item.result,
         }

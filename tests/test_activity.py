@@ -49,7 +49,7 @@ class ActivityTests(unittest.IsolatedAsyncioTestCase):
     async def test_block_counts_only_executed_deletion_and_not_edits(self):
         await KeywordSettings.create(id=1, enabled=True, keywords=['广告'])
         message = {'chat': {'id': -1001}, 'message_id': 50, 'from': {'id': 123}, 'text': '广告'}
-        with patch('services.moderation.execution_allowed', new_callable=AsyncMock, return_value=True), patch('services.moderation.api', new_callable=AsyncMock, return_value=True):
+        with patch('services.moderation.execution_allowed', new_callable=AsyncMock, return_value=True), patch('services.moderation.api', new_callable=AsyncMock, side_effect=lambda group, method, **params: {'status': 'member'} if method == 'getChatMember' else True):
             for update in (1, 2):
                 await enqueue_message(self.group, message, update)
                 await process_job((await ModerationJob.get(update_id=update)).id)

@@ -33,6 +33,7 @@ class GroupConfig(Model):
 # 全局网络配置，空地址表示沿用系统默认网络设置。
 class SystemSettings(Model):
     id = fields.IntField(pk=True)
+    log_retention_days = fields.IntField(default=30)
     proxy_url = fields.CharField(max_length=2048, default="", description="HTTP/HTTPS 代理地址")
 
     class Meta:
@@ -110,6 +111,7 @@ class EventLog(Model):
     parent_event_id = fields.IntField(null=True)
     event_type = fields.CharField(max_length=32)
     nickname = fields.CharField(max_length=128, default="")
+    user_id = fields.BigIntField(null=True, description="Telegram 用户 ID")
     username = fields.CharField(max_length=64, default="")
     content = fields.TextField(default="", description="事件消息内容")
     result = fields.CharField(max_length=500)

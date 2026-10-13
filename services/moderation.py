@@ -1,4 +1,4 @@
-"""广告拦截执行：先白名单，关键词与 AI 任一命中即删除。"""
+"""记录群成员消息及放行原因 管理员豁免 关键词与 AI 任一命中即处置"""
 from services.event_logs import record_event
 import asyncio
 import fcntl
@@ -36,22 +36,24 @@ async def enqueue_message(group, message, update_id):
         'bot_key': key, 'chat_id': group.chat_id, 'user_id': user['id'],
         'message_id': message['message_id'], 'sent_at': message.get('date') or time.time()})
     event_time = message.get('edit_date') or message.get('date')
-    if not text or (event_time and time.time() - event_time > 300):
+    if event_time and time.time() - event_time > 300:
         return
     keywords = await KeywordSettings.get_or_none(id=1)
     ai = await AISettings.get_or_none(id=1)
-    if not ((keywords and keywords.enabled) or (ai and ai.enabled)):
-        return
     if await ModerationJob.filter(state__in=['queued', 'processing', 'deleting']).count() >= 2000:
         if not await EventLog.filter(event_type='运行异常', content='广告拦截队列已满', created_at__gte=event_time_now() - timedelta(seconds=60)).exists():
             await EventLog.create(event_type='运行异常', content='广告拦截队列已满', result='本次消息未处理 请检查 AI 响应速度与消息量')
         return
     key = bot_key(group.bot_token)
     job_id = hashlib.sha256(f'{key}:{group.chat_id}:{message["message_id"]}:{update_id}'.encode()).hexdigest()
-    await ModerationJob.get_or_create(id=job_id, defaults={
+    job, created = await ModerationJob.get_or_create(id=job_id, defaults={
         'bot_key': key, 'chat_id': group.chat_id, 'message_id': message['message_id'], 'update_id': update_id,
-        'user': user, 'content': text[:10000], 'expires_at': time.time() + 300,
+        'user': user, 'content': text[:10000] or next(('[' + label + ']' for field, label in (('photo', '图片'), ('video', '视频'), ('sticker', '贴纸'), ('voice', '语音'), ('audio', '音频'), ('document', '文件'), ('animation', '动画'), ('poll', '投票'), ('location', '位置'), ('contact', '联系人')) if message.get(field)), '[非文本消息]'), 'expires_at': time.time() + 300,
     })
+    if created and not ((keywords and keywords.enabled) or (ai and ai.enabled)):
+        await finish(job, '放行 广告拦截未开启')
+    elif created and not text:
+        await finish(job, '放行 无可识别文本')
 
 
 async def finish(job, result, *, record=True):
@@ -61,7 +63,27 @@ async def finish(job, result, *, record=True):
             await record_activity(job.bot_key, job.chat_id, 'blocked', job.message_id)
         if record and changed:
             await record_event(flow_id=f'moderation:{job.id}', event_type='广告拦截', nickname=nickname(job.user)[:128],
-                username=('@' + job.user['username'])[:64] if job.user.get('username') else '', content=job.content, result=result[:500])
+                user_id=job.user['id'], content=job.content, result=result[:500])
+
+
+async def member_can_be_moderated(group, job, retry_state):
+    """管理员实时豁免 身份查询失败时暂停处置 避免误删"""
+    try:
+        member = await api(group, 'getChatMember', chat_id=job.chat_id, user_id=job.user['id'])
+        if not isinstance(member, dict) or not member.get('status'):
+            raise TelegramError('成员身份检测未通过')
+    except TelegramError:
+        job.attempts += 1
+        if job.attempts < 3:
+            await ModerationJob.filter(id=job.id).update(
+                state=retry_state, attempts=job.attempts, available_at=time.time() + 2 ** job.attempts)
+        else:
+            await finish(job, '成员身份检测失败 已停止剩余广告拦截操作')
+        return False
+    if member['status'] in ('administrator', 'creator'):
+        await finish(job, '放行 群主或管理员免于广告拦截')
+        return False
+    return True
 
 
 async def process_job(job_id):
@@ -90,16 +112,24 @@ async def process_job(job_id):
     ai = await AISettings.get_or_none(id=1)
     whitelist = await WhitelistSettings.get_or_none(id=1)
     if not ((keywords and keywords.enabled) or (ai and ai.enabled)):
-        await finish(job, '广告拦截已关闭 已跳过', record=False)
+        await finish(job, '放行 广告拦截已关闭')
+        return
+    if not await member_can_be_moderated(group, job, state):
         return
     if state == 'queued':
         job.rule_key = rule_key(keywords, ai)
         result = await run_in_threadpool(classify_message, job.content, keywords, ai, await get_proxy_url(),
             whitelist.entries if whitelist else [], str(job.user['id']), job.user.get('username', ''))
         if result['is_spam'] is not True:
-            await finish(job, result['message'], record=result['is_spam'] is None)
+            if result['is_spam'] is None:
+                outcome = '放行 识别异常 ' + result['message'].rstrip('。')
+            elif any(check.get('source') == '白名单' for check in result.get('checks', [])):
+                outcome = '放行 白名单用户'
+            else:
+                outcome = '放行'
+            await finish(job, outcome)
             return
-        job.result = result['message']
+        job.result = result['message'].replace('垃圾消息：', '垃圾信息 ').rstrip('。')
         ai_reason = next((check['detail'] for check in result.get('checks', []) if check.get('source') == 'AI' and check.get('status') == '垃圾'), '')
         if ai_reason:
             job.result += ' 原因 ' + ai_reason[:200]
@@ -143,6 +173,8 @@ async def process_job(job_id):
         if index in job.completed:
             continue
         if not await execution_allowed(group):
+            return
+        if not await member_can_be_moderated(group, job, 'deleting'):
             return
         try:
             params = dict(operation['params'])

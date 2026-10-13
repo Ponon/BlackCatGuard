@@ -14,6 +14,7 @@ from services.runtime_health import run_health_monitor
 from services.background import supervise
 from services.moderation import run_moderation_worker
 from services.notifications import run_push_worker
+from services.log_retention import run_log_cleanup
 
 
 # 生命周期管理
@@ -29,6 +30,7 @@ async def lifespan(app: FastAPI):
             (run_scheduler, 'broadcast-scheduler'),
             (run_moderation_worker, 'moderation-worker'),
             (run_push_worker, 'push-worker'),
+            (run_log_cleanup, 'log-cleanup'),
         )
     ]
     try:

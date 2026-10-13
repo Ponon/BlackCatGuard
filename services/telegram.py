@@ -91,6 +91,7 @@ def inspect_group(token: str, chat_id: str, proxy_url: str = "", *, request_time
         started = time.perf_counter()
         bot = call_api(token, "getMe", proxy_url=proxy_url, request_timeout=request_timeout)
         result["latency_ms"] = max(1, round((time.perf_counter() - started) * 1000))
+        result["bot_id"] = bot.get("id")
         result["bot_name"] = bot.get("first_name", "")
         result["bot_username"] = bot.get("username", "")
         result["checks"].append({"label": "机器人连接", "ok": True, "detail": "Token 有效，机器人连接正常。"})

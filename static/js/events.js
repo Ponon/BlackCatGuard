@@ -42,3 +42,6 @@ clearForm.addEventListener('submit', async event => {
         clearForm.querySelectorAll('button').forEach(item => { item.disabled = false; });
     }
 });
+
+// 更改每页条数后回到第一页
+document.querySelector('#page-size').addEventListener('change', event => event.target.form.requestSubmit());

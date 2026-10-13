@@ -129,7 +129,7 @@ async def test_message(request: Request, text: Annotated[str, Form()] = '', csrf
     if keyword is None and ai is None and not entries:
         raise HTTPException(status_code=400, detail='请先保存关键词或完整的 AI 配置')
     result = await run_in_threadpool(classify_message, text, keyword, ai, await get_proxy_url(), entries, user_id, username)
-    await EventLog.create(event_type='消息测试', content=text, username='@' + username if username else '', result=result['message'][:500])
+    await EventLog.create(event_type='消息测试', content=text, user_id=int(user_id) if user_id else None, result=result['message'][:500])
     return result
 
 

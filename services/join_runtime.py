@@ -31,7 +31,7 @@ def nickname(user):
 
 async def log(session, result, event_type='入群验证', content=None):
     await record_event(flow_id=f'join:{session.id}', event_type=event_type, nickname=nickname(session.user)[:128],
-                          username=('@' + session.user['username'])[:64] if session.user.get('username') else '',
+                          user_id=session.user_id,
                           content=content if content is not None else session.question, result=result[:500])
 
 

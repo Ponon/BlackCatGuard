@@ -178,3 +178,24 @@ document.querySelector('#toggle-bark-url').addEventListener('click', event => {
     const icon = document.querySelector('#bark-eye');
     icon.src = visible ? icon.dataset.hide : icon.dataset.show;
 });
+
+
+const logSettingsForm = document.querySelector('#log-settings-form');
+logSettingsForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    const button = logSettingsForm.querySelector('[type="submit"]');
+    if (button.disabled) return;
+    button.disabled = true;
+    try {
+        const response = await fetch(logSettingsForm.action, {
+            method: 'POST', body: new FormData(logSettingsForm), credentials: 'same-origin',
+            headers: { Accept: 'application/json' },
+        });
+        if (response.status === 401) { window.location.replace('/login'); return; }
+        const result = await response.json();
+        if (!response.ok) { showError(typeof result.detail === 'string' ? result.detail : '日志设置保存失败'); return; }
+        document.querySelector('#log-retention-days').value = result.log_retention_days;
+        showError(result.message, true);
+    } catch { showError('网络请求失败请稍后重试'); }
+    finally { button.disabled = false; }
+});

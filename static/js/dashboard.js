@@ -65,9 +65,10 @@ function updateRecentEvents(events) {
     const fragment = document.createDocumentFragment();
     for (const event of events.slice(0, 5)) {
         const row = document.createElement('tr');
-        for (const key of ['time', 'type', 'nickname', 'username', 'content', 'result']) {
+        for (const key of ['time', 'type', 'content', 'result']) {
             const cell = document.createElement('td');
             cell.textContent = event[key] || '—';
+            if (key === 'nickname' || key === 'content') cell.title = cell.textContent;
             if (key === 'time') cell.className = 'recent-events-time';
             if (key === 'content' || key === 'result') cell.className = `recent-events-${key}`;
             row.appendChild(cell);

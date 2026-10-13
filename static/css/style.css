@@ -400,6 +400,8 @@ h2 {
 
 .main-column,
 .sidebar {
+	min-width: 0;
+	grid-template-columns: minmax(0, 1fr);
 	display: grid;
 	gap: 20px;
 }
@@ -671,6 +673,8 @@ h3 {
 
 /* 首页事件表格只展示最新五条，超宽时在卡片内滚动。 */
 .recent-events-wrap {
+	min-width: 0;
+	max-width: 100%;
 	margin-top: 20px;
 	overflow-x: auto;
 }

@@ -1,0 +1,49 @@
+/* 日志页保留身份列 首页使用四列布局 仅“内容”允许折行 */
+.events-table {
+    width: 100%;
+    min-width: 1120px;
+    table-layout: fixed;
+}
+
+:is(.events-table, .recent-events-table) :is(th, td) {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    overflow-wrap: normal;
+    min-width: 0;
+    max-width: none;
+}
+
+.events-table :is(th, td):nth-child(1) { width: 196px; }
+.events-table :is(th, td):nth-child(2) { width: 112px; }
+.events-table :is(th, td):nth-child(3) { width: 132px; }
+.events-table :is(th, td):nth-child(4) { width: 148px; }
+.events-table :is(th, td):nth-child(5) { width: 260px; }
+
+.events-table td:nth-child(6) {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    text-overflow: clip;
+}
+
+/* 首页不产生横向滚动 不让表格撑开左右分栏 */
+.recent-events-wrap {
+    overflow-x: hidden;
+}
+
+.recent-events-table {
+    width: 100%;
+    min-width: 0;
+    table-layout: fixed;
+}
+
+.recent-events-table :is(th, td):nth-child(1) { width: 168px; }
+.recent-events-table :is(th, td):nth-child(2) { width: 88px; min-width: 0; }
+.recent-events-table :is(th, td):nth-child(3) { width: 28%; }
+.recent-events-table :is(th, td):nth-child(4) { width: auto; }
+
+.recent-events-table td:nth-child(4) {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    text-overflow: clip;
+}

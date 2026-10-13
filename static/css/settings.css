@@ -107,7 +107,8 @@
     gap: 20px;
 }
 
-.account-settings {
+.account-settings,
+.log-settings {
     padding: 24px;
 }
 

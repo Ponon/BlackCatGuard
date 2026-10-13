@@ -57,6 +57,7 @@ async def settings_page(request: Request):
             'username': admin.username, 'csrf_token': get_csrf_token(request),
             'proxy_url': settings.proxy_url if settings else '',
             'network_saved': settings is not None,
+            'log_retention_days': settings.log_retention_days if settings else 30,
             'push_saved': push is not None, 'push_provider': push.provider if push else '',
             'bark_url': push.bark_url if push else '', 'push_events': push.events if push else [],
             'push_event_options': EVENT_OPTIONS,
@@ -161,3 +162,15 @@ async def update_account(
     # 修改成功后退出当前登录状态，以新账号信息重新登录。
     request.session.clear()
     return {'message': '账号信息已更新，请重新登录。', 'redirect': '/login'}
+
+
+@router.post('/settings/logs')
+async def save_log_settings(request: Request, log_retention_days: Annotated[str, Form()] = '', csrf_token: Annotated[str, Form()] = ''):
+    await require_admin(request)
+    require_csrf(request, csrf_token)
+    value = log_retention_days.strip()
+    if not re.fullmatch(r'[0-9]{1,6}', value) or int(value) > 36500:
+        raise HTTPException(status_code=400, detail='日志保留天数需为 0 到 36500 的整数')
+    days = int(value)
+    await SystemSettings.update_or_create(id=1, defaults={'log_retention_days': days})
+    return {'message': '日志保留设置已保存', 'log_retention_days': days}

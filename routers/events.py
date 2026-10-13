@@ -30,13 +30,14 @@ async def events_page(request: Request, page: int = 1, page_size: int = 10):
         rows.append({
             'time': display_time(record.created_at),
             'type': record.event_type, 'nickname': record.nickname,
-            'username': record.username, 'content': record.content, 'result': record.result,
+            'user_id': str(record.user_id) if record.user_id is not None else '', 'content': record.content, 'result': record.result,
         })
     return templates.TemplateResponse(request=request, name='events.html', context={
         'page_title': '事件日志 · 黑猫群管', 'active_page': 'events',
         'username': admin.username, 'csrf_token': get_csrf_token(request),
         'rows': rows, 'total': total, 'page': page, 'pages': pages,
         'page_size': page_size, 'page_sizes': PAGE_SIZES,
+        'page_numbers': sorted({1, pages, *range(max(1, page - 2), min(pages, page + 2) + 1)}),
         'success': request.session.pop('events_success', ''),
     }, headers={'Cache-Control': 'no-store'})
 

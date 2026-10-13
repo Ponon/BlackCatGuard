@@ -35,7 +35,9 @@ class PushError(Exception):
 
 def event_key(event):
     if event.event_type == '广告拦截':
-        return 'ad_block' if '垃圾消息' in event.result else 'runtime_failed'
+        if event.result.startswith('放行'):
+            return 'runtime_failed' if '识别异常' in event.result else None
+        return 'ad_block' if ('垃圾消息' in event.result or '垃圾信息' in event.result) else 'runtime_failed'
     if event.event_type == '入群验证':
         if '验证通过' in event.result: return 'verification_passed'
         if '验证超时' in event.result: return 'verification_timeout'
@@ -61,7 +63,7 @@ def compact_text(value, limit=120):
 def notification_body(event, key):
     """推送只给一行摘要，详细消息留在事件日志。"""
     result = compact_text(event.result, 110)
-    user = compact_text(event.nickname or event.username or '成员', 24)
+    user = compact_text(event.nickname or (str(event.user_id) if getattr(event, 'user_id', None) is not None else '成员'), 24)
     if key == 'connection_failed':
         body = 'Telegram 连接中断，正在检测重试'
     elif key == 'connection_restored':

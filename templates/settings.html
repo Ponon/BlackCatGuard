@@ -6,12 +6,12 @@
         <title>{{ page_title }}</title>
         <link rel="icon" type="image/svg+xml" href="{{ url_for('static', path='/images/logo.svg') }}">
         <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}?v=8">
-        <link rel="stylesheet" href="{{ url_for('static', path='/css/settings.css') }}?v=2">
+        <link rel="stylesheet" href="{{ url_for('static', path='/css/settings.css') }}?v=3">
         <link rel="stylesheet" href="{{ url_for('static', path='/css/toast.css') }}">
         <script src="{{ url_for('static', path='/js/toast.js') }}?v=20261012-4" defer></script>
         <script src="{{ url_for('static', path='/js/dashboard.js') }}" defer></script>
         <script src="{{ url_for('static', path='/js/form-state.js') }}" defer></script>
-        <script src="{{ url_for('static', path='/js/settings.js') }}?v=2" defer></script>
+        <script src="{{ url_for('static', path='/js/settings.js') }}?v=3" defer></script>
     </head>
     <body>
         {% include 'partials/header.html' %}
@@ -92,6 +92,16 @@
                                 <span class="settings-help" id="push-save-state">{{ '已保存' if push_saved else '尚未保存' }}</span>
                             </div>
                             <p class="settings-help">测试使用已保存地址 无需开启推送</p>
+                        </form>
+                    </section>
+                    <section class="panel log-settings">
+                        <div class="section-heading"><div><h2>日志设置</h2><p>设置事件日志的保存期限</p></div></div>
+                        <form class="settings-form" id="log-settings-form" action="/settings/logs" method="post">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <label class="settings-label" for="log-retention-days">日志保留天数</label>
+                            <input class="settings-input" id="log-retention-days" name="log_retention_days" type="number" min="0" max="36500" step="1" value="{{ log_retention_days }}" required aria-describedby="log-retention-help">
+                            <p class="settings-help" id="log-retention-help">默认保留 30 天 设为 0 永久保留 每天自动清理过期日志</p>
+                            <div class="settings-actions"><button class="button button--primary" type="submit">保存日志设置</button></div>
                         </form>
                     </section>
                     <section class="panel account-settings">

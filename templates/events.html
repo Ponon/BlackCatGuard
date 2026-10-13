@@ -5,11 +5,12 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>{{ page_title }}</title>
         <link rel="icon" type="image/svg+xml" href="{{ url_for('static', path='/images/logo.svg') }}">
-        <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}?v=11">
-        <link rel="stylesheet" href="{{ url_for('static', path='/css/events.css') }}?v=2">
+        <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}?v=12">
+        <link rel="stylesheet" href="{{ url_for('static', path='/css/events.css') }}?v=3">
+        <link rel="stylesheet" href="{{ url_for('static', path='/css/log-table.css') }}?v=2">
         <link rel="stylesheet" href="{{ url_for('static', path='/css/toast.css') }}">
         <script src="{{ url_for('static', path='/js/toast.js') }}" defer></script>
-        <script src="{{ url_for('static', path='/js/events.js') }}" defer></script>
+        <script src="{{ url_for('static', path='/js/events.js') }}?v=2" defer></script>
     </head>
     <body>
         {% include 'partials/header.html' %}
@@ -39,7 +40,7 @@
                                 <th scope="col">时间</th>
                                 <th scope="col">类型</th>
                                 <th scope="col">用户昵称</th>
-                                <th scope="col">用户名</th>
+                                <th scope="col">用户 ID</th>
                                 <th scope="col">事件</th>
                                 <th scope="col">内容</th>
                             </tr>
@@ -49,9 +50,9 @@
                             <tr>
                                 <td class="events-time">{{ row.time }}</td>
                                 <td>{{ row.type }}</td>
-                                <td>{{ row.nickname or '—' }}</td>
-                                <td>{{ row.username or '—' }}</td>
-                                <td class="events-content">{{ row.content or '—' }}</td>
+                                <td title="{{ row.nickname or '—' }}">{{ row.nickname or '—' }}</td>
+                                <td>{{ row.user_id or '—' }}</td>
+                                <td class="events-content" title="{{ row.content or '—' }}">{{ row.content or '—' }}</td>
                                 <td class="events-result">{{ row.result }}</td>
                             </tr>
                             {% else %}
@@ -61,30 +62,23 @@
                     </table>
                 </div>
                 <div class="events-pagination">
-                    <p>共 {{ total }} 条 · 第 {{ page }} / {{ pages }} 页</p>
                     <div class="events-controls">
                         <form class="events-size" action="/events" method="get">
                             <label for="page-size">每页条数</label>
                             <select id="page-size" name="page_size">
-                                {% for size in page_sizes %}
-                                <option value="{{ size }}" {% if page_size == size %}selected{% endif %}>{{ size }} 条</option>
-                                {% endfor %}
+                                {% for size in page_sizes %}<option value="{{ size }}" {% if page_size == size %}selected{% endif %}>{{ size }} 条</option>{% endfor %}
                             </select>
-                            <button class="button" type="submit">应用</button>
                         </form>
-                        <nav class="events-pages" aria-label="日志分页">
-                            {% if page > 1 %}
-                            <a class="button" href="/events?page={{ page - 1 }}&amp;page_size={{ page_size }}">上一页</a>
-                            {% else %}
-                            <button class="button" disabled>上一页</button>
-                            {% endif %}
-                            {% if page < pages %}
-                            <a class="button" href="/events?page={{ page + 1 }}&amp;page_size={{ page_size }}">下一页</a>
-                            {% else %}
-                            <button class="button" disabled>下一页</button>
-                            {% endif %}
-                        </nav>
+                        <p>共 {{ total }} 条</p>
                     </div>
+                    <nav class="events-pages" aria-label="日志分页">
+                        {% if page > 1 %}<a class="button" aria-label="上一页" href="/events?page={{ page - 1 }}&amp;page_size={{ page_size }}">‹</a>{% else %}<button class="button" aria-label="上一页" disabled>‹</button>{% endif %}
+                        {% for number in page_numbers %}
+                            {% if not loop.first and number > page_numbers[loop.index0 - 1] + 1 %}<span class="events-page-gap">…</span>{% endif %}
+                            {% if number == page %}<span class="button events-page-current" aria-current="page">{{ number }}</span>{% else %}<a class="button" href="/events?page={{ number }}&amp;page_size={{ page_size }}">{{ number }}</a>{% endif %}
+                        {% endfor %}
+                        {% if page < pages %}<a class="button" aria-label="下一页" href="/events?page={{ page + 1 }}&amp;page_size={{ page_size }}">›</a>{% else %}<button class="button" aria-label="下一页" disabled>›</button>{% endif %}
+                    </nav>
                 </div>
             </section>
             {% include 'partials/footer.html' %}

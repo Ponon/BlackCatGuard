@@ -157,7 +157,7 @@ class BroadcastTests(unittest.IsolatedAsyncioTestCase):
         await SystemSettings.create(id=1, proxy_url='http://localhost:7897')
         content = (await self.content())['content']
         task = (await self.task(content['id'], enabled='true'))['task']
-        with patch('services.broadcast_delivery.execution_allowed', new_callable=AsyncMock, return_value=True), patch('services.broadcast_delivery.call_api', return_value={'message_id': 42, 'from': {'first_name': '群助手', 'username': 'helper_bot'}}) as sender:
+        with patch('services.broadcast_delivery.execution_allowed', new_callable=AsyncMock, return_value=True), patch('services.broadcast_delivery.call_api', return_value={'message_id': 42, 'from': {'id': 456, 'first_name': '群助手', 'username': 'helper_bot'}}) as sender:
             result = await deliver_broadcast(task['id'])
         self.assertTrue(result['ok'])
         self.assertEqual(sender.call_args.args[1], 'sendMessage')
@@ -165,7 +165,7 @@ class BroadcastTests(unittest.IsolatedAsyncioTestCase):
         record = await EventLog.get()
         self.assertEqual(record.event_type, '群广播')
         self.assertEqual(record.result, '发送成功')
-        self.assertEqual(record.username, '@helper_bot')
+        self.assertEqual(record.user_id, 456)
         self.assertEqual(record.nickname, '群助手')
         self.assertNotIn('{datetime}', record.content)
         self.assertNotIn('secret', record.result)

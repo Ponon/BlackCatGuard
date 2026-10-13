@@ -34,6 +34,8 @@ async def init_db():
     await migrate_runtime_latency()
     await migrate_event_links()
     await migrate_push_types()
+    await migrate_event_user_ids()
+    await migrate_log_retention()
 
 
 # 程序关闭时释放数据库连接。
@@ -167,3 +169,29 @@ async def migrate_push_types():
             settings.events = list(dict.fromkeys('runtime_failed' if value == 'auto_disabled' else value for value in settings.events))
             await settings.save(update_fields=['events'])
     await PushJob.filter(event_key='auto_disabled').update(event_key='runtime_failed')
+
+
+async def migrate_event_user_ids():
+    """保留旧日志 从明确关联的任务和验证会话补全用户 ID"""
+    connection = Tortoise.get_connection('default')
+    columns = await connection.execute_query_dict('PRAGMA table_info("event_logs")')
+    if 'user_id' not in {column['name'] for column in columns}:
+        await connection.execute_query('ALTER TABLE event_logs ADD COLUMN user_id BIGINT NULL')
+    from dao.models import EventLog, JoinSession, ModerationJob
+    for event in await EventLog.filter(user_id=None).exclude(flow_id=''):
+        user_id = None
+        if event.flow_id.startswith('join:'):
+            session = await JoinSession.get_or_none(id=event.flow_id[5:])
+            user_id = session.user_id if session else None
+        elif event.flow_id.startswith('moderation:'):
+            job = await ModerationJob.get_or_none(id=event.flow_id[11:])
+            user_id = job.user.get('id') if job else None
+        if type(user_id) is int:
+            await EventLog.filter(id=event.id).update(user_id=user_id)
+
+
+async def migrate_log_retention():
+    connection = Tortoise.get_connection('default')
+    columns = await connection.execute_query_dict('PRAGMA table_info("system_settings")')
+    if 'log_retention_days' not in {column['name'] for column in columns}:
+        await connection.execute_query('ALTER TABLE system_settings ADD COLUMN log_retention_days INT NOT NULL DEFAULT 30')

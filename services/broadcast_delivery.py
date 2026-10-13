@@ -48,7 +48,7 @@ async def deliver_broadcast(task_id, attempt_id=None):
         return None
     check = group.check_result if group and isinstance(group.check_result, dict) else {}
     nickname = check.get('bot_name', '')
-    username = check.get('bot_username', '')
+    user_id = check.get('bot_id')
     message_id = None
     attempts = 0
     try:
@@ -80,7 +80,7 @@ async def deliver_broadcast(task_id, attempt_id=None):
             raise TelegramError('未获得发送确认', uncertain=True)
         sender = response.get('from') or {}
         nickname = sender.get('first_name') or nickname
-        username = sender.get('username') or username
+        user_id = sender.get('id') or user_id
         result = '发送成功' if attempts == 1 else f'发送成功 共尝试 {attempts} 次'
         attempt_state = 'success'
         ok = True
@@ -95,7 +95,7 @@ async def deliver_broadcast(task_id, attempt_id=None):
         await BroadcastAttempt.filter(id=attempt_id).update(state=attempt_state)
         await record_event(
             flow_id=f'broadcast:{attempt_id}', event_type='群广播', nickname=nickname[:128],
-            username=('@' + username.lstrip('@'))[:64] if username else '',
+            user_id=user_id,
             content=text, result=result[:500],
         )
     return {'ok': ok, 'message_id': message_id, 'message': result}

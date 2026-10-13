@@ -135,3 +135,9 @@
     white-space: nowrap;
     overflow-wrap: normal;
 }
+
+.events-pagination { flex-wrap: wrap; }
+.events-pages { gap: 6px; }
+.events-pages .button { min-width: 36px; padding: 8px 10px; justify-content: center; }
+.events-pages .events-page-current { background: var(--ink); color: #fff; border-color: var(--ink); }
+.events-page-gap { padding: 0 4px; color: var(--muted); }

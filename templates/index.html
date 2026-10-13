@@ -5,10 +5,11 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>{{ page_title }}</title>
-        <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}?v=11">
+        <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}?v=12">
+        <link rel="stylesheet" href="{{ url_for('static', path='/css/log-table.css') }}?v=2">
         <link rel="stylesheet" href="{{ url_for('static', path='/css/toast.css') }}">
         <script src="{{ url_for('static', path='/js/toast.js') }}?v=20261012-4" defer></script>
-        <script src="{{ url_for('static', path='/js/dashboard.js') }}?v=2" defer></script>
+        <script src="{{ url_for('static', path='/js/dashboard.js') }}?v=5" defer></script>
     </head>
     <body>
         {% if success %}
@@ -132,8 +133,6 @@
                                         <tr>
                                             <th scope="col">时间</th>
                                             <th scope="col">类型</th>
-                                            <th scope="col">用户昵称</th>
-                                            <th scope="col">用户名</th>
                                             <th scope="col">事件</th>
                                             <th scope="col">内容</th>
                                         </tr>
@@ -143,9 +142,7 @@
                                         <tr>
                                             <td class="recent-events-time">{{ event.time }}</td>
                                             <td>{{ event.type }}</td>
-                                            <td>{{ event.nickname or '—' }}</td>
-                                            <td>{{ event.username or '—' }}</td>
-                                            <td class="recent-events-content">{{ event.content or '—' }}</td>
+                                            <td class="recent-events-content" title="{{ event.content or '—' }}">{{ event.content or '—' }}</td>
                                             <td class="recent-events-result">{{ event.result }}</td>
                                         </tr>
                                         {% endfor %}
