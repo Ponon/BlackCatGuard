@@ -24,10 +24,88 @@ class PushTests(unittest.IsolatedAsyncioTestCase):
         await Tortoise.close_connections()
 
     async def settings(self, provider='bark', events=None):
-        return await save_push_settings(self.request, provider, 'https://example.invalid/device-key', events if events is not None else ['auto_disabled'], 'token')
+        return await save_push_settings(self.request, provider, 'https://example.invalid/device-key', events if events is not None else ['runtime_failed'], 'token')
 
     async def event(self):
         return await EventLog.create(event_type='自动停用', content='连续三轮检测失败', result='已关闭全部任务')
+
+    async def test_runtime_subscription_covers_retry_exhaustion(self):
+        await self.settings(events=['runtime_failed'])
+        event = await EventLog.create(event_type='运行异常', content='超过最大重试次数', result='已关闭 入群验证 恢复后需手动开启')
+        self.assertEqual(await PushJob.filter(event_id=event.id).count(), 1)
+
+    async def test_old_auto_disabled_subscription_migrates(self):
+        from dao.database import migrate_push_types
+        await self.settings(events=['runtime_failed'])
+        await PushSettings.all().update(events=['auto_disabled', 'runtime_failed'])
+        await migrate_push_types()
+        await migrate_push_types()
+        self.assertEqual((await PushSettings.get()).events, ['runtime_failed'])
+
+    async def test_push_log_names_source_event_instead_of_product_title(self):
+        await self.settings(events=['runtime_failed'])
+        await EventLog.create(event_type='运行异常', content='超过最大重试次数', result='当前没有已启用功能 无需停用')
+        with patch('services.notifications.send_bark', side_effect=PushError('地址无法连接')):
+            await push_tick()
+        log = await EventLog.get(event_type='系统推送')
+        self.assertEqual(log.content, '推送运行异常')
+        self.assertEqual(log.result, '推送失败 地址无法连接')
+
+    async def test_slow_push_keeps_reserved_row_next_to_source(self):
+        await self.settings(events=['connection_failed'])
+        source = await EventLog.create(event_type='连接异常', content='连接 Telegram 失败', result='连接 Telegram 中断，准备检测连接')
+        placeholder = await EventLog.get(event_type='系统推送')
+        self.assertEqual(placeholder.result, '推送中')
+        timestamp = placeholder.created_at
+        for _ in range(3):
+            await EventLog.create(event_type='连接检测', content='Telegram连接重试', result='连接失败')
+        with patch('services.notifications.send_bark'):
+            await push_tick()
+        rows = await EventLog.all().order_by('id')
+        self.assertEqual([r.id for r in rows[:2]], [source.id, placeholder.id])
+        self.assertEqual(rows[1].result, '推送成功')
+        self.assertEqual(rows[1].created_at, timestamp)
+        self.assertEqual(rows[1].parent_event_id, source.id)
+        self.assertEqual(rows[1].flow_id, source.flow_id)
+        self.assertEqual(len(rows), 5)
+
+    async def test_broadcast_success_notification_and_option_order(self):
+        await self.settings(events=['broadcast_success'])
+        event = await EventLog.create(event_type='群广播', content='群公告', result='发送成功 共尝试 2 次')
+        job = await PushJob.get(event_id=event.id)
+        self.assertEqual(job.event_key, 'broadcast_success')
+        with patch('services.notifications.send_bark'):
+            await push_tick()
+        log = await EventLog.get(event_type='系统推送')
+        self.assertEqual(log.content, '推送广播成功')
+        self.assertEqual(log.result, '推送成功')
+        html = (await settings_page(self.request)).body.decode()
+        self.assertIn('推送类型', html)
+        self.assertLess(html.index('push-event-broadcast_success'), html.index('push-event-broadcast_failed'))
+        self.assertNotIn('功能自动关闭', html)
+        self.assertNotIn('push-event-auto_disabled', html)
+
+    async def test_skipped_broadcast_is_not_a_delivery_failure(self):
+        await self.settings(events=['broadcast_failed'])
+        await EventLog.create(event_type='群广播', content='任务 1', result='任务已关闭或删除 本次计划已跳过')
+        self.assertEqual(await PushJob.all().count(), 0)
+        await EventLog.create(event_type='群广播', content='正文', result='发送失败 网络异常')
+        self.assertEqual(await PushJob.all().count(), 1)
+
+    async def test_runtime_error_matches_runtime_subscription(self):
+        await self.settings(events=['runtime_failed'])
+        event = await EventLog.create(event_type='运行异常', content='接收或处理 Telegram 事件失败', result='连接 Telegram 中断')
+        self.assertEqual((await PushJob.get(event_id=event.id)).event_key, 'runtime_failed')
+
+    async def test_detection_logs_never_notify_until_recovery(self):
+        await self.settings(events=['runtime_failed', 'connection_failed', 'connection_restored'])
+        for _ in range(3):
+            await EventLog.create(event_type='连接检测', content='Telegram连接重试', result='连接失败')
+        self.assertEqual(await PushJob.all().count(), 0)
+        await EventLog.create(event_type='连接检测', content='Telegram连接重试', result='连接成功')
+        self.assertEqual(await PushJob.all().count(), 0)
+        await EventLog.create(event_type='连接恢复', content='Telegram 连接恢复正常', result='连接已恢复 功能保持当前开关状态')
+        self.assertEqual(await PushJob.all().count(), 1)
 
     async def test_selection_only_new_events_and_push_failure_cannot_recurse(self):
         await self.event()
@@ -53,7 +131,7 @@ class PushTests(unittest.IsolatedAsyncioTestCase):
         sender.assert_not_called()
         self.assertEqual((await PushJob.get()).state, 'cancelled')
 
-    async def test_success_uses_proxy_and_is_not_sent_twice(self):
+    async def test_success_bypasses_configured_proxy_and_is_not_sent_twice(self):
         await self.settings()
         await SystemSettings.create(id=1, proxy_url='http://localhost:7897')
         await self.event()
@@ -61,7 +139,7 @@ class PushTests(unittest.IsolatedAsyncioTestCase):
             await push_tick()
             await push_tick()
         self.assertEqual(sender.call_count, 1)
-        self.assertEqual(sender.call_args.args[-1], 'http://localhost:7897')
+        self.assertEqual(len(sender.call_args.args), 3)
         self.assertEqual((await PushJob.get()).state, 'done')
 
     async def test_safe_network_error_retries_at_most_three_times(self):
@@ -112,18 +190,47 @@ class PushTests(unittest.IsolatedAsyncioTestCase):
         await EventLog.create(event_type='入群验证', content='算术验证', result='回答错误 已封禁用户所有权限')
         job = await PushJob.get()
         self.assertEqual(job.event_key, 'verification_wrong')
-        self.assertIn('验证答错', job.title)
+        self.assertEqual(job.title, '黑猫群管')
+        self.assertIn('验证答错', job.body)
+
+
+class NotificationBodyTests(unittest.TestCase):
+    def test_all_event_summaries_are_short_single_lines(self):
+        from types import SimpleNamespace
+        from services.notifications import EVENT_OPTIONS, notification_body
+        event = SimpleNamespace(nickname='小黑\n@blackcat', username='', content='长消息\n' * 300,
+                                result='回答错误 已限制用户权限\n' * 100)
+        for key in EVENT_OPTIONS:
+            body = notification_body(event, key)
+            self.assertNotIn('\n', body)
+            self.assertNotIn('\r', body)
+            self.assertLessEqual(len(body), 160)
+        event.content = '超过最大重试次数'
+        event.result = '当前没有已启用功能 无需停用'
+        self.assertEqual(notification_body(event, 'runtime_failed'),
+                         'Telegram 连续重试 3 次失败，当前没有已启用功能 无需停用')
+        self.assertEqual(notification_body(event, 'broadcast_success'), '群广播发送成功')
 
 
 class BarkTransportTests(unittest.TestCase):
+    def test_direct_transport_ignores_environment_proxy(self):
+        from services.network import open_request
+        from urllib.request import Request
+        with patch.dict('os.environ', {'HTTPS_PROXY': 'http://localhost:1'}), patch('services.network.build_opener') as build:
+            open_request(Request('https://example.invalid'), direct=True)
+        self.assertEqual(build.call_args.args[0].proxies, {})
+
+
     def test_post_json_and_validate_success(self):
         response = io.BytesIO(json.dumps({'code': 200}).encode())
         with patch('services.notifications.open_request', return_value=response) as opener:
-            send_bark('https://example.invalid/key', '标题', '正文', 'http://localhost:7897')
+            send_bark('https://example.invalid/key', '标题', '正文')
         request = opener.call_args.args[0]
         self.assertEqual(request.method, 'POST')
         self.assertEqual(json.loads(request.data)['body'], '正文')
-        self.assertEqual(opener.call_args.kwargs['proxy_url'], 'http://localhost:7897')
+        self.assertEqual(json.loads(request.data)['group'], '黑猫群管')
+        self.assertEqual(json.loads(request.data)['title'], '黑猫群管')
+        self.assertTrue(opener.call_args.kwargs['direct'])
 
     def test_error_does_not_expose_device_key(self):
         with patch('services.notifications.open_request', side_effect=TimeoutError()), self.assertRaises(PushError) as error:

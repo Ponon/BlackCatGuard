@@ -75,6 +75,31 @@ class GroupTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(result['configured'])
         self.assertFalse(result['check_result']['ok'])
 
+    async def test_saved_failure_message_and_shared_live_health(self):
+        from services.runtime_health import health_snapshot
+        with patch('routers.group.inspect_group', return_value={'ok': False, 'message': '连接超时', 'checks': []}):
+            result = await self.save()
+        self.assertIn('保存成功', result['message'])
+        self.assertIn('检测未通过', result['message'])
+        self.assertFalse(result['check_result']['ok'])
+        self.assertEqual((await health_snapshot())['state'], 'unstable')
+        with patch('routers.group.inspect_group', return_value={'ok': True, 'message': '通过', 'checks': [], 'latency_ms': 123}):
+            await check_config(self.request, 'token')
+        snapshot = await health_snapshot()
+        self.assertEqual(snapshot['state'], 'online')
+        self.assertEqual(snapshot['latency_ms'], 123)
+
+    async def test_proxy_change_during_manual_check_rejects_old_result(self):
+        from dao.models import SystemSettings
+        await self.save()
+        async def change_proxy(*args):
+            await SystemSettings.create(id=1, proxy_url='http://localhost:7897')
+            return {'ok': True, 'checks': []}
+        with patch('routers.group.run_in_threadpool', side_effect=change_proxy):
+            with self.assertRaises(HTTPException) as error:
+                await check_config(self.request, 'token')
+        self.assertEqual(error.exception.status_code, 409)
+
     async def test_access_validation_and_csrf(self):
         for chat, token, csrf, status in [('-1001', TOKEN, 'bad', 403), ('https://t.me/test', TOKEN, 'token', 400), ('-1001', 'bad', 'token', 400)]:
             with self.assertRaises(HTTPException) as error:

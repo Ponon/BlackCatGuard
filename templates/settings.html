@@ -40,7 +40,7 @@
                         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                         <label class="settings-label" for="proxy-url">代理地址</label>
                         <input class="settings-input" id="proxy-url" name="proxy_url" type="text" maxlength="2048" value="{{ proxy_url }}" placeholder="选填，留空使用默认网络" autocomplete="off" spellcheck="false" aria-describedby="proxy-help">
-                        <p class="settings-help" id="proxy-help">支持 HTTP / HTTPS 代理。填写后，后台外部连接统一使用该代理；留空则使用默认网络设置。</p>
+                        <p class="settings-help" id="proxy-help">支持 HTTP / HTTPS 代理。填写后 Telegram 和 AI 连接使用该代理；留空则使用默认网络设置。Bark 推送始终直连。</p>
                         <div class="settings-actions">
                             <button class="button button--primary" type="submit" id="save-settings">保存设置</button>
                             <span class="settings-help" id="settings-save-state">{{ '已保存' if network_saved else '尚未保存' }}</span>
@@ -75,7 +75,7 @@
                                 <p class="settings-help">填写 Bark 应用中的服务器地址和设备 Key 不包含示例推送正文 支持自建服务器</p>
                             </div>
                             <fieldset class="push-event-fieldset">
-                                <legend class="settings-label">推送事件</legend>
+                                <legend class="settings-label">推送类型</legend>
                                 <div class="push-events">
                                     {% for value, label in push_event_options.items() %}
                                     <label class="push-event" for="push-event-{{ value }}">
@@ -84,7 +84,7 @@
                                     </label>
                                     {% endfor %}
                                 </div>
-                                <p class="settings-help">只推送保存后新发生的所选事件 使用系统代理 推送失败不影响群功能</p>
+                                <p class="settings-help">只推送保存后新发生的所选类型 始终直连 不经过系统代理 推送失败不影响群功能</p>
                             </fieldset>
                             <div class="settings-actions">
                                 <button class="button button--primary" type="submit">保存推送设置</button>

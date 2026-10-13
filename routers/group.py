@@ -10,6 +10,7 @@ from starlette.concurrency import run_in_threadpool
 from dao.models import Administrator, GroupConfig, VerificationSettings, WelcomeSettings, KeywordSettings, AISettings, BroadcastSettings, BroadcastTask, BroadcastSchedule, JoinSession
 from services.telegram import inspect_group
 from services.network import get_proxy_url
+from services.runtime_health import probe_lock, record_probe
 from utils.security import get_csrf_token, valid_csrf_token
 from utils.views import templates
 
@@ -90,7 +91,7 @@ async def save_config(request: Request, chat_id: str = Form(""), bot_token: str 
         })
     # 保存接口直接执行一次检测，调用方不需要额外发起检测请求。
     result = await check_config(request, csrf_token)
-    return {"message": result["message"], "configured": True,
+    return {"message": "配置保存成功并检测通过" if result.get("ok") else "配置保存成功但检测未通过请检查网络设置和机器人权限后重新检测", "configured": True,
             "chat_id": chat_id, "bot_token": token, "check_result": result}
 
 
@@ -98,13 +99,19 @@ async def save_config(request: Request, chat_id: str = Form(""), bot_token: str 
 async def check_config(request: Request, csrf_token: str = Form("")):
     await require_admin(request)
     require_csrf(request, csrf_token)
-    config = await GroupConfig.get_or_none(id=1)
-    if config is None:
-        raise HTTPException(status_code=400, detail="请先保存机器人和群组配置。")
-    # urllib 是同步请求，放到工作线程避免阻塞其他页面请求。
-    proxy_url = await get_proxy_url()
-    result = await run_in_threadpool(inspect_group, config.bot_token, config.chat_id, proxy_url)
-    updated = await GroupConfig.filter(id=1, revision=config.revision).update(check_result=result)
-    if not updated:
-        raise HTTPException(status_code=409, detail="配置已经变更，请重新检测。")
-    return result
+    async with probe_lock:
+        config = await GroupConfig.get_or_none(id=1)
+        if config is None:
+            raise HTTPException(status_code=400, detail="请先保存机器人和群组配置")
+        proxy_url = await get_proxy_url()
+        result = await run_in_threadpool(inspect_group, config.bot_token, config.chat_id, proxy_url)
+        # 代理也属于检测快照，拒绝把切换代理前的结果写回新配置。
+        if await get_proxy_url() != proxy_url:
+            raise HTTPException(status_code=409, detail="网络设置已经变更请重新检测")
+        result = await record_probe(config, proxy_url, result)
+        if result is None:
+            raise HTTPException(status_code=409, detail="配置已经变更请重新检测")
+        updated = await GroupConfig.filter(id=1, revision=config.revision).update(check_result=result)
+        if not updated:
+            raise HTTPException(status_code=409, detail="配置已经变更请重新检测")
+        return result

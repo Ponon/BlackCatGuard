@@ -32,6 +32,8 @@ async def init_db():
     await migrate_moderation_jobs()
     await migrate_join_actions()
     await migrate_runtime_latency()
+    await migrate_event_links()
+    await migrate_push_types()
 
 
 # 程序关闭时释放数据库连接。
@@ -142,3 +144,26 @@ async def migrate_runtime_latency():
     columns = await connection.execute_query_dict('PRAGMA table_info("runtime_health")')
     if columns and 'latency_ms' not in {column['name'] for column in columns}:
         await connection.execute_query('ALTER TABLE runtime_health ADD COLUMN latency_ms INT NULL')
+
+
+async def migrate_event_links():
+    connection = Tortoise.get_connection('default')
+    for table, additions in {
+        'event_logs': {'flow_id': "VARCHAR(128) NOT NULL DEFAULT ''", 'parent_event_id': 'INT NULL'},
+        'runtime_health': {'flow_id': "VARCHAR(128) NOT NULL DEFAULT ''"},
+    }.items():
+        columns = await connection.execute_query_dict(f'PRAGMA table_info("{table}")')
+        names = {column['name'] for column in columns}
+        for name, definition in additions.items():
+            if columns and name not in names:
+                await connection.execute_query(f'ALTER TABLE "{table}" ADD COLUMN "{name}" {definition}')
+    await connection.execute_query('CREATE INDEX IF NOT EXISTS event_logs_flow_id_idx ON event_logs (flow_id)')
+
+
+async def migrate_push_types():
+    from dao.models import PushSettings, PushJob
+    for settings in await PushSettings.all():
+        if 'auto_disabled' in settings.events:
+            settings.events = list(dict.fromkeys('runtime_failed' if value == 'auto_disabled' else value for value in settings.events))
+            await settings.save(update_fields=['events'])
+    await PushJob.filter(event_key='auto_disabled').update(event_key='runtime_failed')

@@ -34,9 +34,9 @@ class ExplicitProxyHandler(ProxyHandler):
         return self.parent.open(request, timeout=request.timeout)
 
 
-def open_request(request, *, proxy_url: str = "", timeout: int = 10):
+def open_request(request, *, proxy_url: str = "", timeout: int = 10, direct: bool = False):
     # 每次新建 opener，避免保存配置后继续使用旧代理或污染进程全局状态。
-    handler = ExplicitProxyHandler({'http': proxy_url, 'https': proxy_url}) if proxy_url else ProxyHandler()
+    handler = ProxyHandler({}) if direct else (ExplicitProxyHandler({'http': proxy_url, 'https': proxy_url}) if proxy_url else ProxyHandler())
     # 显式加载可信根证书，避免 Python 安装缺少系统 CA 时连接失败。
     context = ssl.create_default_context(cafile=certifi.where())
     return build_opener(handler, HTTPSHandler(context=context)).open(request, timeout=timeout)

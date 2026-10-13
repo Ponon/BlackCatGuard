@@ -5,7 +5,7 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>{{ page_title }}</title>
-        <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}?v=10">
+        <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}?v=11">
         <link rel="stylesheet" href="{{ url_for('static', path='/css/toast.css') }}">
         <script src="{{ url_for('static', path='/js/toast.js') }}?v=20261012-4" defer></script>
         <script src="{{ url_for('static', path='/js/dashboard.js') }}?v=2" defer></script>
@@ -134,8 +134,8 @@
                                             <th scope="col">类型</th>
                                             <th scope="col">用户昵称</th>
                                             <th scope="col">用户名</th>
+                                            <th scope="col">事件</th>
                                             <th scope="col">内容</th>
-                                            <th scope="col">结果</th>
                                         </tr>
                                     </thead>
                                     <tbody id="runtime-events-body">

@@ -1,4 +1,5 @@
 """广播后台调度：北京时间每日定时，或从启用后按间隔执行。"""
+from services.event_logs import record_event
 import asyncio
 import json
 import hashlib
@@ -38,7 +39,7 @@ async def tick(now=None):
             changed = await BroadcastAttempt.filter(id=attempt.id, state=attempt.state).update(state='unknown')
             if changed:
                 result = f'任务 {attempt.task_id} 上次执行中断 发送结果不确定 未自动重发' if attempt.state == 'sending' else f'任务 {attempt.task_id} 发送前执行中断 已跳过且不补发'
-                await EventLog.create(event_type='群广播', content=attempt.content, result=result)
+                await record_event(flow_id=f'broadcast:{attempt.id}', event_type='群广播', content=attempt.content, result=result)
     # 关闭后清除进度，再开启从新的启用时间计时。
     disabled_ids = await BroadcastTask.filter(enabled=False).values_list('id', flat=True)
     if disabled_ids:

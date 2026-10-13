@@ -42,11 +42,86 @@ class HealthTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(HTTPException):
             await ensure_can_enable()
         await self.probe(False)
-        self.assertEqual(await EventLog.filter(event_type='自动停用').count(), 1)
+        self.assertEqual(await EventLog.filter(result__startswith='已关闭 ').count(), 1)
         await self.probe(True)
         self.assertEqual((await health_snapshot())['state'], 'online')
         self.assertFalse((await BroadcastTask.get()).enabled)
         self.assertTrue(await EventLog.filter(result__contains='需手动开启').exists())
+
+    async def test_no_enabled_features_does_not_log_auto_disable(self):
+        for model in (VerificationSettings, WelcomeSettings, KeywordSettings, AISettings, BroadcastTask):
+            await model.all().update(enabled=False)
+        for _ in range(3):
+            await self.probe(False)
+        self.assertFalse(await EventLog.filter(event_type='自动停用').exists())
+        self.assertTrue(await EventLog.filter(result__contains='没有已启用功能').exists())
+        await self.probe(True)
+        recovered = await EventLog.filter(result='连接成功').get()
+        self.assertNotIn('已关闭', recovered.result)
+
+    async def test_auto_disable_only_names_enabled_features(self):
+        for model in (WelcomeSettings, KeywordSettings, AISettings, BroadcastTask):
+            await model.all().update(enabled=False)
+        for _ in range(3):
+            await self.probe(False)
+        log = await EventLog.filter(result__startswith='已关闭 ').get()
+        self.assertIn('入群验证', log.result)
+        for name in ('欢迎语', '关键词', 'AI', '广播'):
+            self.assertNotIn(name, log.result)
+
+    async def test_failure_series_has_consistent_type_and_content(self):
+        for _ in range(3):
+            await self.probe(False)
+        rows = await EventLog.all().order_by('id')
+        self.assertEqual([row.event_type for row in rows], ['连接异常', '连接检测', '连接检测', '连接检测', '运行异常'])
+        self.assertEqual(rows[0].content, '连接 Telegram 失败')
+        self.assertEqual(rows[0].result, '连接 Telegram 中断，准备检测连接')
+        self.assertEqual([row.content for row in rows[1:4]], ['Telegram连接重试'] * 3)
+        self.assertEqual([row.result for row in rows[1:4]], ['连接失败'] * 3)
+        self.assertEqual(rows[4].content, '超过最大重试次数')
+
+    async def test_full_outage_log_sequence_with_push_results(self):
+        from dao.models import PushSettings
+        from services.notifications import push_tick
+        from services.runtime_health import report_connection_fault
+        for model in (VerificationSettings, WelcomeSettings, KeywordSettings, AISettings, BroadcastTask):
+            await model.all().update(enabled=False)
+        await PushSettings.create(id=1, provider='bark', bark_url='https://example.invalid/key',
+                                  events=['connection_failed', 'runtime_failed'], revision='push')
+        with patch('services.notifications.send_bark') as sender:
+            await report_connection_fault(self.group, '', '首次中断')
+            await report_connection_fault(self.group, '', '随后超时')
+            await push_tick()
+            for _ in range(3):
+                await self.probe(False)
+                await push_tick()
+            await self.probe(False)
+            await push_tick()
+        self.assertEqual(sender.call_count, 2)
+        rows = await EventLog.all().order_by('id')
+        self.assertEqual([(r.event_type, r.content, r.result) for r in rows], [
+            ('连接异常', '连接 Telegram 失败', '连接 Telegram 中断，准备检测连接'),
+            ('系统推送', '推送连接异常', '推送成功'),
+            ('连接检测', 'Telegram连接重试', '连接失败'),
+            ('连接检测', 'Telegram连接重试', '连接失败'),
+            ('连接检测', 'Telegram连接重试', '连接失败'),
+            ('运行异常', '超过最大重试次数', '当前没有已启用功能 无需停用'),
+            ('系统推送', '推送运行异常', '推送成功'),
+        ])
+        self.assertEqual(len({r.flow_id for r in rows}), 1)
+        self.assertTrue(rows[0].flow_id)
+        for child, parent in ((1, 0), (2, 0), (3, 2), (4, 3), (5, 4), (6, 5)):
+            self.assertEqual(rows[child].parent_event_id, rows[parent].id)
+        await self.probe(True)
+        recovered = await EventLog.all().order_by('-id').limit(2)
+        self.assertEqual([(r.event_type, r.result) for r in reversed(recovered)], [
+            ('连接检测', '连接成功'), ('连接恢复', '连接已恢复 功能保持当前开关状态')])
+        self.assertEqual(recovered[0].parent_event_id, recovered[1].id)
+        self.assertEqual(recovered[0].flow_id, rows[0].flow_id)
+        await report_connection_fault(self.group, '', '下一次中断')
+        self.assertEqual(await EventLog.filter(event_type='连接异常').count(), 2)
+        next_outage = await EventLog.filter(event_type='连接异常').order_by('-id').first()
+        self.assertNotEqual(next_outage.flow_id, rows[0].flow_id)
 
     async def test_success_resets_failure_count(self):
         await self.probe(False)
@@ -83,7 +158,7 @@ class HealthTests(unittest.IsolatedAsyncioTestCase):
         for _ in range(3):
             await self.probe(True)
         self.assertTrue((await RuntimeHealth.get()).stopped)
-        self.assertIn('接收程序冲突', (await EventLog.filter(event_type='自动停用').get()).content)
+        self.assertIn('接收程序冲突', (await RuntimeHealth.get()).reason)
 
     async def test_status_endpoint_is_authenticated_and_no_store(self):
         from main import app

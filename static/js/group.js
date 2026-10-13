@@ -38,7 +38,7 @@ function displayResult(result) {
     const list = document.querySelector('#check-list');
     list.replaceChildren();
     // 通过 textContent 写入外部群名等数据，避免 HTML 注入。
-    for (const item of result.checks) {
+    for (const item of result.checks || []) {
         const row = document.createElement('li');
         row.className = item.ok ? 'check-item' : 'check-item check-item--error';
         const heading = document.createElement('div');
@@ -113,7 +113,7 @@ groupForm.addEventListener('submit', async event => {
         document.querySelector('#config-status').textContent = configured ? '已保存' : '未配置';
         if (result.check_result) displayResult(result.check_result);
         else clearResult('保存配置后，点击下方按钮开始检测。');
-        showError(result.message, !result.check_result || result.check_result.ok);
+        showError(result.message, true);
     } catch (error) {
         showError(error instanceof TypeError ? '网络请求失败请稍后重试' : error.message);
     } finally {

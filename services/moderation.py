@@ -1,4 +1,5 @@
 """广告拦截执行：先白名单，关键词与 AI 任一命中即删除。"""
+from services.event_logs import record_event
 import asyncio
 import fcntl
 import hashlib
@@ -42,8 +43,8 @@ async def enqueue_message(group, message, update_id):
     if not ((keywords and keywords.enabled) or (ai and ai.enabled)):
         return
     if await ModerationJob.filter(state__in=['queued', 'processing', 'deleting']).count() >= 2000:
-        if not await EventLog.filter(event_type='机器人运行', content='广告拦截队列已满', created_at__gte=event_time_now() - timedelta(seconds=60)).exists():
-            await EventLog.create(event_type='机器人运行', content='广告拦截队列已满', result='本次消息未处理 请检查 AI 响应速度与消息量')
+        if not await EventLog.filter(event_type='运行异常', content='广告拦截队列已满', created_at__gte=event_time_now() - timedelta(seconds=60)).exists():
+            await EventLog.create(event_type='运行异常', content='广告拦截队列已满', result='本次消息未处理 请检查 AI 响应速度与消息量')
         return
     key = bot_key(group.bot_token)
     job_id = hashlib.sha256(f'{key}:{group.chat_id}:{message["message_id"]}:{update_id}'.encode()).hexdigest()
@@ -59,7 +60,7 @@ async def finish(job, result, *, record=True):
         if changed and job.completed and any(job.operations[i]['method'] in ('deleteMessage', 'deleteMessages') for i in job.completed):
             await record_activity(job.bot_key, job.chat_id, 'blocked', job.message_id)
         if record and changed:
-            await EventLog.create(event_type='广告拦截', nickname=nickname(job.user)[:128],
+            await record_event(flow_id=f'moderation:{job.id}', event_type='广告拦截', nickname=nickname(job.user)[:128],
                 username=('@' + job.user['username'])[:64] if job.user.get('username') else '', content=job.content, result=result[:500])
 
 

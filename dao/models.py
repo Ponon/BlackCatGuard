@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -98,9 +99,15 @@ def event_time_now():
 
 
 # 保存事件内容与处理结果，配置密钥不写入日志。
+def new_event_flow():
+    return uuid.uuid4().hex
+
+
 class EventLog(Model):
     id = fields.IntField(pk=True)
     created_at = fields.DatetimeField(default=event_time_now)
+    flow_id = fields.CharField(max_length=128, default=new_event_flow, db_index=True)
+    parent_event_id = fields.IntField(null=True)
     event_type = fields.CharField(max_length=32)
     nickname = fields.CharField(max_length=128, default="")
     username = fields.CharField(max_length=64, default="")
@@ -209,6 +216,7 @@ class RuntimeHealth(Model):
     last_success = fields.FloatField(default=0)
     stopped = fields.BooleanField(default=False)
     reason = fields.CharField(max_length=500, default='')
+    flow_id = fields.CharField(max_length=128, default='')
 
     class Meta:
         table = 'runtime_health'

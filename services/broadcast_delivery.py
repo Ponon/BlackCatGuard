@@ -1,4 +1,5 @@
 """循环广播单次发送与结果日志。"""
+from services.event_logs import record_event
 import json
 import asyncio
 import time
@@ -29,7 +30,7 @@ async def deliver_broadcast(task_id, attempt_id=None):
             async with in_transaction():
                 changed = await BroadcastAttempt.filter(id=attempt_id, state='queued').update(state='skipped')
                 if changed:
-                    await EventLog.create(event_type='群广播', content=f'任务 {task_id}', result='任务已关闭或删除 本次计划已跳过')
+                    await record_event(flow_id=f'broadcast:{attempt_id}', event_type='群广播', content=f'任务 {task_id}', result='任务已关闭或删除 本次计划已跳过')
         return None
     content = await BroadcastContent.get_or_none(id=task.content_id)
     if content is None:
@@ -92,8 +93,8 @@ async def deliver_broadcast(task_id, attempt_id=None):
     # 日志与最终状态一起提交，避免状态完成却没有结果日志。
     async with in_transaction():
         await BroadcastAttempt.filter(id=attempt_id).update(state=attempt_state)
-        await EventLog.create(
-            event_type='群广播', nickname=nickname[:128],
+        await record_event(
+            flow_id=f'broadcast:{attempt_id}', event_type='群广播', nickname=nickname[:128],
             username=('@' + username.lstrip('@'))[:64] if username else '',
             content=text, result=result[:500],
         )

@@ -793,3 +793,11 @@ h3 {
     flex-wrap: wrap;
     gap: 4px 12px;
 }
+
+.events-table th:nth-child(2), .events-table td:nth-child(2),
+.recent-events-table th:nth-child(2), .recent-events-table td:nth-child(2) {
+    width: 112px;
+    min-width: 112px;
+    white-space: nowrap;
+    overflow-wrap: normal;
+}

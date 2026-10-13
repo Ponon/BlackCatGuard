@@ -19,7 +19,7 @@ async def supervise(service, name):
             logger.error('%s 异常退出 五秒后重新启动', name)
             if time.monotonic() - last_report >= 60:
                 try:
-                    await EventLog.create(event_type='机器人运行', content=f'{name} 后台服务异常退出', result='五秒后自动重新启动')
+                    await EventLog.create(event_type='运行异常', content=f'{name} 后台服务异常退出', result='五秒后自动重新启动')
                 except Exception:
                     logger.error('后台服务异常日志暂时无法写入')
                 last_report = time.monotonic()

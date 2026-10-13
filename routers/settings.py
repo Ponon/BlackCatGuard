@@ -11,7 +11,6 @@ from fastapi.responses import RedirectResponse
 from dao.models import Administrator, SystemSettings, PushSettings
 from starlette.concurrency import run_in_threadpool
 from services.notifications import EVENT_OPTIONS, send_bark, PushError
-from services.network import get_proxy_url
 from routers.group import require_admin, require_csrf
 from utils.security import get_csrf_token, hash_password, verify_password
 from utils.views import templates
@@ -119,7 +118,7 @@ async def test_push(request: Request, csrf_token: Annotated[str, Form()] = ''):
     if not settings or not settings.bark_url:
         raise HTTPException(status_code=400, detail='请先保存 Bark 推送地址')
     try:
-        await run_in_threadpool(send_bark, settings.bark_url, '黑猫群管 测试推送', '系统推送连接测试', await get_proxy_url())
+        await run_in_threadpool(send_bark, settings.bark_url, '黑猫群管', '系统推送连接测试')
     except PushError as error:
         raise HTTPException(status_code=502, detail=str(error)) from None
     return {'message': 'Bark 推送服务已接收测试消息'}

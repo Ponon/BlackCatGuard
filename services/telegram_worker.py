@@ -3,13 +3,12 @@ import asyncio
 import fcntl
 import json
 import logging
-import time
 
 from dao.database import DATABASE_PATH
 from dao.models import GroupConfig, TelegramCursor, ReceiverFault, EventLog
 from services.join_runtime import bot_key, maintain, process_join, process_callback
 from services.telegram import TelegramError, call_api
-from services.runtime_health import execution_allowed, config_key
+from services.runtime_health import execution_allowed, config_key, report_connection_fault
 from services.network import get_proxy_url
 from starlette.concurrency import run_in_threadpool
 from services.moderation import enqueue_message
@@ -55,7 +54,6 @@ async def run_telegram_worker():
             except BlockingIOError:
                 await asyncio.sleep(2)
         previous_error = ''
-        last_error_at = 0
         while True:
             group = await GroupConfig.get_or_none(id=1)
             if group and group.bot_token and group.chat_id:
@@ -72,10 +70,10 @@ async def run_telegram_worker():
                     await ReceiverFault.update_or_create(id=1, defaults={
                         'config_key': config_key(group, await get_proxy_url()), 'reason': text[:500],
                     })
-                    if text != previous_error or time.time() - last_error_at > 300:
+                    if not previous_error:
                         logger.error('Telegram 入群服务不可用 %s', text)
-                        await EventLog.create(event_type='机器人运行', content='接收或处理入群事件失败', result=text[:500])
-                        previous_error, last_error_at = text, time.time()
+                        await report_connection_fault(group, await get_proxy_url(), text[:500])
+                        previous_error = text
                     await asyncio.sleep(5)
                 except Exception:
                     # 统一监督器记录异常并重启，不静默吞掉处理错误。
