@@ -1,0 +1,22 @@
+name: blackcatguard
+
+services:
+  blackcatguard:
+    build: .
+    restart: unless-stopped
+    init: true
+    ports:
+      - "${BIND_ADDRESS:-0.0.0.0}:${PORT:-1777}:1777"
+    volumes:
+      - data:/app/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  data:

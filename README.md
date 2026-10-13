@@ -40,8 +40,8 @@
 | 入群欢迎 | 独立开关、自定义欢迎语、昵称和用户名变量、延时删除 |
 | 广告拦截 | 关键词包含匹配、OpenAI 兼容 AI 识别、用户白名单、消息与成员处置 |
 | 群广播 | 保存多条内容、配置链接按钮、每天多个时间点或按分钟间隔发送 |
-| 事件日志 | 按时间查看事件、昵称、用户名、内容与结果，分页及确认清空 |
-| 系统设置 | 统一 HTTP/HTTPS 代理、修改管理员账号、Bark 推送及事件选择 |
+| 事件日志 | 按时间查看类型、昵称、用户 ID、事件与内容，页码分页及确认清空 |
+| 系统设置 | 统一 HTTP/HTTPS 代理、日志保留天数、修改管理员账号、Bark 推送及类型选择 |
 
 ### 入群与防护流程
 
@@ -53,7 +53,61 @@
 
 ## 快速开始
 
-### 环境准备
+### Docker Compose 部署
+
+先安装 [Docker Engine 与 Compose 插件](https://docs.docker.com/engine/install/) 或 Docker Desktop，无需在宿主机安装 Python 和数据库。
+
+```bash
+git clone https://github.com/Ponon/BlackCatGuard.git
+cd BlackCatGuard
+docker compose up -d --build
+```
+
+访问 `http://服务器IP:1777`，首次使用同意须知并创建管理员，然后按照下方“首次配置”完成设置。本机部署访问 `http://127.0.0.1:1777`。服务需能访问 Telegram，也可以在网页系统设置中配置代理。
+
+当前从源码本地构建镜像，无需拉取项目预构建镜像。容器使用 Python 3.13、非 root 用户、单 worker，数据库和登录密钥保存在 Docker 数据卷中，重建容器后继续保留。默认在 Docker 启动后自动运行，手动停止后保持停止。
+
+```bash
+# 查看启动状态与容器输出
+docker compose ps
+docker compose logs --tail=100 -f
+
+# 停止 / 启动
+docker compose stop
+docker compose start
+```
+
+端口默认 1777，可通过 `PORT=1888 docker compose up -d` 调整宿主机端口。若使用宿主机 HTTPS 反向代理，可用 `BIND_ADDRESS=127.0.0.1 docker compose up -d` 仅监听本机；长期自定义请在项目根目录的 `.env` 中保存 `PORT=1777` 与 `BIND_ADDRESS=127.0.0.1` 等值。公网访问建议配置 HTTPS，并限制管理页面的访问范围。
+
+**代理地址**：容器中的 `127.0.0.1` 指容器自身。使用宿主机代理时，网页中填写 `http://host.docker.internal:代理端口`，并让代理监听容器可以访问的地址；使用其他服务器的代理则填写其实际地址。Bark 推送始终直连。
+
+#### 升级与备份
+
+升级前停止服务并备份整个 `data` 目录，包含 SQLite 数据库与登录密钥。备份含机器人与接口凭据，请妥善保存。以下备份目录使用不同名称以避免覆盖旧备份：
+
+```bash
+docker compose stop
+mkdir -p backups
+docker compose cp blackcatguard:/app/data ./backups/data-before-upgrade
+git pull --ff-only
+docker compose up -d --build
+```
+
+升级会自动迁移已有数据库，不需要重新初始化。不要启动多个实例共用同一群组，也不要运行 `docker compose down -v`，该命令会删除持久化数据卷。[Docker 数据卷说明](https://docs.docker.com/engine/storage/volumes/)
+
+恢复备份时先停止服务，确保容器已创建，再复制数据并修正文件归属：
+
+```bash
+docker compose stop
+docker compose create
+docker compose cp ./backups/data-before-upgrade/. blackcatguard:/app/data/
+docker compose run --rm --no-deps --user 0 --entrypoint chown blackcatguard -R 10001:10001 /app/data
+docker compose up -d
+```
+
+恢复操作会覆盖当前同名数据文件，应恢复到兼容该备份的应用版本。健康检查用于确认管理网页能响应，Telegram 连接状态以工作台显示为准；容器标记 unhealthy 不会自动重启，进程退出才由重启策略处理。
+
+### 源码部署环境准备
 
 - Python **3.13**
 - 能访问 Telegram 的网络，或可用的 HTTP/HTTPS 代理
