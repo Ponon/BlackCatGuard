@@ -23,6 +23,11 @@ class HealthTests(unittest.IsolatedAsyncioTestCase):
         await Tortoise.close_connections()
 
     async def probe(self, ok):
+        from services.runtime_health import report_connection_fault
+        from dao.models import ReceiverFault
+        if not ok or await ReceiverFault.exists():
+            await report_connection_fault(self.group, '', '模拟连接中断')
+        await RuntimeHealth.all().update(checked_at=time.time() - 11)
         with patch('services.runtime_health.inspect_group', return_value={'ok': ok, 'message': '模拟代理连接失败'}):
             await probe_once()
 
@@ -213,3 +218,40 @@ class HealthTests(unittest.IsolatedAsyncioTestCase):
         await migrate_runtime_latency()
         self.assertIsNone((await RuntimeHealth.get()).latency_ms)
         self.assertEqual((await health_snapshot())['latency_label'], '—')
+
+
+class RetryDelayTests(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
+        await Tortoise.init(db_url='sqlite://:memory:', modules={'models': ['dao.models']})
+        await Tortoise.generate_schemas()
+        self.group = await GroupConfig.create(id=1, bot_token='fake', chat_id='-1001', revision='r1')
+
+    async def asyncTearDown(self):
+        await Tortoise.close_connections()
+
+    async def test_initial_failure_not_counted_and_each_retry_waits_ten_seconds(self):
+        from services.runtime_health import record_probe
+        result = {'ok': False, 'message': '连接中断'}
+        with patch('services.runtime_health.time.time', return_value=100):
+            await record_probe(self.group, '', result)
+        self.assertEqual((await RuntimeHealth.get()).failures, 0)
+        self.assertEqual(await EventLog.filter(event_type='连接检测').count(), 0)
+        for now, count in ((109, 0), (110, 1), (119, 1), (120, 2), (129, 2), (130, 3)):
+            with patch('services.runtime_health.time.time', return_value=now):
+                await record_probe(self.group, '', result)
+            self.assertEqual((await RuntimeHealth.get()).failures, count)
+        self.assertEqual(await EventLog.filter(event_type='连接检测').count(), 3)
+        self.assertEqual(await EventLog.filter(event_type='运行异常').count(), 1)
+
+    async def test_receiver_fault_waits_before_starting_first_network_probe(self):
+        from services.runtime_health import report_connection_fault
+        with patch('services.runtime_health.time.time', return_value=100):
+            await report_connection_fault(self.group, '', '接收中断')
+        with patch('services.runtime_health.inspect_group', return_value={'ok': False}) as inspect:
+            with patch('services.runtime_health.time.time', return_value=109):
+                await probe_once()
+            inspect.assert_not_called()
+            with patch('services.runtime_health.time.time', return_value=110):
+                await probe_once()
+            inspect.assert_called_once()
+        self.assertEqual((await RuntimeHealth.get()).failures, 1)

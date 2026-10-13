@@ -75,7 +75,7 @@ async def health_snapshot():
     state = health.state
     if time.time() - health.checked_at > STALE_AFTER:
         state = 'stale'
-    labels = {'online': '连接正常', 'unstable': f'连接波动 连续失败 {health.failures} 次',
+    labels = {'online': '连接正常', 'unstable': f'连接波动 连续失败 {health.failures} 次' if health.failures else '连接异常 等待重试',
               'offline': '连接异常 暂停执行', 'checking': '正在检测', 'stale': '监测状态已过期 暂停执行'}
     return present_health(state, labels[state], health)
 
@@ -90,7 +90,9 @@ async def _probe_once():
     if not group or not group.bot_token or not group.chat_id:
         return
     proxy = await get_proxy_url()
-    key = config_key(group, proxy)
+    health = await current_health(group)
+    if health and health.reason and time.time() - health.checked_at < INTERVAL:
+        return
     # 每轮只探测一次，内部不重试，连续错误次数才有明确含义。
     result = await run_in_threadpool(inspect_group, group.bot_token, group.chat_id, proxy)
     await record_probe(group, proxy, result)
@@ -102,6 +104,8 @@ async def announce_connection_fault(health, reason):
         health.flow_id = uuid.uuid4().hex
         health.reason = reason
         health.state = 'unstable'
+        health.checked_at = time.time()
+        health.latency_ms = None
         await health.save()
         await record_event(flow_id=health.flow_id, event_type='连接异常', content='连接 Telegram 失败',
                               result='连接 Telegram 中断，准备检测连接')
@@ -146,6 +150,13 @@ async def record_probe(group, proxy, result):
             health.state, health.failures, health.stopped = 'online', 0, False
             health.last_success, health.reason = now, ''
         else:
+            # 首次失败只报告异常 等待完整间隔后才开始三次重试
+            if not was_failed:
+                await announce_connection_fault(health, str(result.get('message') or '连接 Telegram 失败')[:500])
+                return result
+            # 手动检测也不能在等待期内消耗重试次数
+            if now - health.checked_at < INTERVAL:
+                return result
             await announce_connection_fault(health, str(result.get('message') or '连接 Telegram 失败')[:500])
             health.failures = min(health.failures + 1, 3)
             health.reason = str(result.get('message') or 'Telegram 连接或权限检测失败')[:500]
