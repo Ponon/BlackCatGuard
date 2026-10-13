@@ -4,13 +4,13 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>{{ page_title }}</title>
-        <link rel="icon" type="image/svg+xml" href="{{ url_for('static', path='/images/logo.svg') }}">
-        <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}?v=11">
-        <link rel="stylesheet" href="{{ url_for('static', path='/css/group.css') }}?v=8">
-        <link rel="stylesheet" href="{{ url_for('static', path='/css/toast.css') }}">
-        <script src="{{ url_for('static', path='/js/toast.js') }}?v=30261012-4" defer></script>
-        <script src="{{ url_for('static', path='/js/dashboard.js') }}" defer></script>
-        <script src="{{ url_for('static', path='/js/group.js') }}?v=8" defer></script>
+        <link rel="icon" type="image/svg+xml" href="{{ url_for('static', path='/images/logo.svg').path }}">
+        <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css').path }}?v=11">
+        <link rel="stylesheet" href="{{ url_for('static', path='/css/group.css').path }}?v=8">
+        <link rel="stylesheet" href="{{ url_for('static', path='/css/toast.css').path }}">
+        <script src="{{ url_for('static', path='/js/toast.js').path }}?v=30261012-4" defer></script>
+        <script src="{{ url_for('static', path='/js/dashboard.js').path }}" defer></script>
+        <script src="{{ url_for('static', path='/js/group.js').path }}?v=8" defer></script>
     </head>
     <body>
         {% include 'partials/header.html' %}
@@ -41,7 +41,7 @@
                             <div class="config-section">
                                 <div class="config-section-heading">
                                     <div class="feature-icon icon-background--blue">
-                                        <img class="icon" src="{{ url_for('static', path='/images/robot.svg') }}" alt="">
+                                        <img class="icon" src="{{ url_for('static', path='/images/robot.svg').path }}" alt="">
                                     </div>
                                     <div>
                                         <h3>机器人信息</h3>
@@ -52,7 +52,7 @@
                                 <div class="secret-field">
                                     <input class="config-input" id="bot-token" name="bot_token" type="password" value="{{ bot_token }}" maxlength="256" autocomplete="new-password" spellcheck="false" placeholder="请输入 BotFather 提供的 Token">
                                     <button class="button" id="toggle-token" type="button" aria-label="显示 Token" aria-controls="bot-token" aria-pressed="false">
-                                        <img class="icon" id="token-eye" src="{{ url_for('static', path='/images/eye.svg') }}" data-show="{{ url_for('static', path='/images/eye.svg') }}" data-hide="{{ url_for('static', path='/images/eye-off.svg') }}" alt="">
+                                        <img class="icon" id="token-eye" src="{{ url_for('static', path='/images/eye.svg').path }}" data-show="{{ url_for('static', path='/images/eye.svg').path }}" data-hide="{{ url_for('static', path='/images/eye-off.svg').path }}" alt="">
                                     </button>
                                 </div>
                                 <p class="field-help">默认隐藏 Token，点击右侧眼睛查看或检查。<a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer">打开 BotFather</a></p>
@@ -60,7 +60,7 @@
                             <div class="config-section">
                                 <div class="config-section-heading">
                                     <div class="feature-icon icon-background--violet">
-                                        <img class="icon" src="{{ url_for('static', path='/images/group.svg') }}" alt="">
+                                        <img class="icon" src="{{ url_for('static', path='/images/group.svg').path }}" alt="">
                                     </div>
                                     <div>
                                         <h3>目标群组</h3>
@@ -86,7 +86,7 @@
                                 <h2>配置检测</h2>
                                 <p>检查连接、目标群和管理权限。</p>
                             </div>
-                            <img class="icon" src="{{ url_for('static', path='/images/verify.svg') }}" alt="">
+                            <img class="icon" src="{{ url_for('static', path='/images/verify.svg').path }}" alt="">
                         </div>
                         <div class="check-summary">
                             <span class="check-status" id="check-status">尚未检测</span>

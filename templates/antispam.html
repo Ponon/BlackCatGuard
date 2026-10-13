@@ -4,14 +4,14 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>{{ page_title }}</title>
-        <link rel="icon" type="image/svg+xml" href="{{ url_for('static', path='/images/logo.svg') }}">
-        <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}?v=7">
-        <link rel="stylesheet" href="{{ url_for('static', path='/css/antispam.css') }}">
-        <link rel="stylesheet" href="{{ url_for('static', path='/css/toast.css') }}">
-        <script src="{{ url_for('static', path='/js/toast.js') }}?v=20261012-4" defer></script>
-        <script src="{{ url_for('static', path='/js/dashboard.js') }}" defer></script>
-        <script src="{{ url_for('static', path='/js/form-state.js') }}" defer></script>
-        <script src="{{ url_for('static', path='/js/antispam.js') }}" defer></script>
+        <link rel="icon" type="image/svg+xml" href="{{ url_for('static', path='/images/logo.svg').path }}">
+        <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css').path }}?v=7">
+        <link rel="stylesheet" href="{{ url_for('static', path='/css/antispam.css').path }}">
+        <link rel="stylesheet" href="{{ url_for('static', path='/css/toast.css').path }}">
+        <script src="{{ url_for('static', path='/js/toast.js').path }}?v=20261012-4" defer></script>
+        <script src="{{ url_for('static', path='/js/dashboard.js').path }}" defer></script>
+        <script src="{{ url_for('static', path='/js/form-state.js').path }}" defer></script>
+        <script src="{{ url_for('static', path='/js/antispam.js').path }}" defer></script>
     </head>
     <body>
         {% include 'partials/header.html' %}

@@ -71,3 +71,24 @@ class SetupTests(unittest.IsolatedAsyncioTestCase):
         response = await self.create(password='a' * 129, confirm_password='a' * 129)
         self.assertEqual(response.status_code, 400)
         self.assertFalse(await Administrator.exists())
+
+
+    async def test_static_assets_use_same_origin_behind_https_proxy(self):
+        import re
+        self.request.scope['headers'] = [(b'host', b'example.test'), (b'x-forwarded-proto', b'https')]
+        # 模拟外部 HTTPS 但应用实际收到 HTTP 的反向代理请求
+        self.request.scope['scheme'] = 'http'
+        response = await setup_page(self.request)
+        html = response.body.decode()
+        assets = re.findall(r'(?:src|href|data-show|data-hide)="([^" ]*static/[^" ]+)"', html)
+        self.assertGreater(len(assets), 5)
+        self.assertTrue(all(asset.startswith('/static/') for asset in assets))
+        self.assertNotIn('http://example.test/static/', html)
+
+    async def test_static_assets_preserve_configured_root_path(self):
+        import re
+        self.request.scope['root_path'] = '/guard'
+        response = await setup_page(self.request)
+        assets = re.findall(r'(?:src|href)="([^" ]*static/[^" ]+)"', response.body.decode())
+        self.assertGreater(len(assets), 5)
+        self.assertTrue(all(asset.startswith('/guard/static/') for asset in assets))

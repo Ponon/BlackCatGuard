@@ -53,7 +53,10 @@ class CompletionTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(response.status_code, 200)
                 self.assertEqual(response.headers['Cache-Control'], 'no-store')
                 parser = PageParser()
-                parser.feed(response.body.decode())
+                html = response.body.decode()
+                parser.feed(html)
+                self.assertGreater(len(parser.resources), 0)
+                self.assertNotIn('http://localhost/static/', html)
                 self.assertEqual(len(parser.ids), len(set(parser.ids)))
                 for resource in parser.resources:
                     self.assertTrue((ROOT / 'static' / resource).is_file(), resource)

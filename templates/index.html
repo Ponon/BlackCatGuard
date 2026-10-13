@@ -1,15 +1,15 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
     <head>
-        <link rel="icon" type="image/svg+xml" href="{{ url_for('static', path='/images/logo.svg') }}">
+        <link rel="icon" type="image/svg+xml" href="{{ url_for('static', path='/images/logo.svg').path }}">
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>{{ page_title }}</title>
-        <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}?v=12">
-        <link rel="stylesheet" href="{{ url_for('static', path='/css/log-table.css') }}?v=2">
-        <link rel="stylesheet" href="{{ url_for('static', path='/css/toast.css') }}">
-        <script src="{{ url_for('static', path='/js/toast.js') }}?v=20261012-4" defer></script>
-        <script src="{{ url_for('static', path='/js/dashboard.js') }}?v=5" defer></script>
+        <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css').path }}?v=12">
+        <link rel="stylesheet" href="{{ url_for('static', path='/css/log-table.css').path }}?v=2">
+        <link rel="stylesheet" href="{{ url_for('static', path='/css/toast.css').path }}">
+        <script src="{{ url_for('static', path='/js/toast.js').path }}?v=20261012-4" defer></script>
+        <script src="{{ url_for('static', path='/js/dashboard.js').path }}?v=5" defer></script>
     </head>
     <body>
         {% if success %}
@@ -27,7 +27,7 @@
                 <p>一个机器人，一个群。让群管理更简单。</p>
             </div>
             <a class="button button--primary" href="/group">
-                <img class="button-icon" src="{{ url_for('static', path='/images/add.svg') }}" alt="" aria-hidden="true">
+                <img class="button-icon" src="{{ url_for('static', path='/images/add.svg').path }}" alt="" aria-hidden="true">
                 <span>{{ dashboard.setup_label }}</span>
             </a>
         </section>
@@ -40,14 +40,14 @@
                         <p>后台持续检测连接与权限 每 10 秒更新状态</p>
                     </div>
                     <div class="status">
-                        <img class="status-icon" src="{{ url_for('static', path='/images/status-idle.svg') }}" alt="" aria-hidden="true">
+                        <img class="status-icon" src="{{ url_for('static', path='/images/status-idle.svg').path }}" alt="" aria-hidden="true">
                         <span id="runtime-status" aria-live="polite">{{ dashboard.status }}</span>
                     </div>
                 </div>
                 <div class="stats">
                     <article class="stat">
                         <div class="stat-icon icon-background--blue">
-                            <img class="icon" src="{{ url_for('static', path='/images/robot.svg') }}" alt="" aria-hidden="true">
+                            <img class="icon" src="{{ url_for('static', path='/images/robot.svg').path }}" alt="" aria-hidden="true">
                         </div>
                         <span class="stat-label">机器人状态</span>
                         <div class="stat-connection" id="runtime-connection" data-tone="{{ dashboard.health.tone }}" aria-live="polite" title="后台经当前网络访问 Telegram 的请求往返耗时，1000 ms 及以上标红">
@@ -61,7 +61,7 @@
                     </article>
                     <article class="stat">
                         <div class="stat-icon icon-background--violet">
-                            <img class="icon" src="{{ url_for('static', path='/images/group.svg') }}" alt="" aria-hidden="true">
+                            <img class="icon" src="{{ url_for('static', path='/images/group.svg').path }}" alt="" aria-hidden="true">
                         </div>
                         <span class="stat-label">目标群组</span>
                         <strong class="stat-value stat-value--text" id="runtime-group-name">{{ dashboard.group_name }}</strong>
@@ -69,7 +69,7 @@
                     </article>
                     <article class="stat">
                         <div class="stat-icon icon-background--green">
-                            <img class="icon" src="{{ url_for('static', path='/images/add.svg') }}" alt="" aria-hidden="true">
+                            <img class="icon" src="{{ url_for('static', path='/images/add.svg').path }}" alt="" aria-hidden="true">
                         </div>
                         <span class="stat-label">今日新增成员</span>
                         <strong class="stat-value" id="runtime-members-today">{{ dashboard.members_today }}</strong>
@@ -77,7 +77,7 @@
                     </article>
                     <article class="stat">
                         <div class="stat-icon icon-background--orange">
-                            <img class="icon" src="{{ url_for('static', path='/images/verify.svg') }}" alt="" aria-hidden="true">
+                            <img class="icon" src="{{ url_for('static', path='/images/verify.svg').path }}" alt="" aria-hidden="true">
                         </div>
                         <span class="stat-label">今日拦截次数</span>
                         <strong class="stat-value" id="runtime-blocked-today">{{ dashboard.blocked_today }}</strong>
@@ -100,7 +100,7 @@
                                 {% for feature in dashboard.features %}
                                 <div class="feature-row">
                                     <div class="feature-icon icon-background--{{ feature.color }}">
-                                        <img class="icon" src="{{ url_for('static', path='/images/' + feature.icon) }}" alt="" aria-hidden="true">
+                                        <img class="icon" src="{{ url_for('static', path='/images/' + feature.icon).path }}" alt="" aria-hidden="true">
                                     </div>
                                     <div class="feature-copy">
                                         <h3 class="feature-title">{{ feature.title }}</h3>
@@ -109,13 +109,13 @@
                                     <span data-feature-status="{{ loop.index0 }}" class="muted-status{% if feature.enabled %} feature-status--enabled{% endif %}">{{ feature.status }}</span>
                                     <a class="button button--compact" href="{{ feature.href }}">
                                         <span>配置</span>
-                                        <img class="button-icon" src="{{ url_for('static', path='/images/arrow-up-right.svg') }}" alt="" aria-hidden="true">
+                                        <img class="button-icon" src="{{ url_for('static', path='/images/arrow-up-right.svg').path }}" alt="" aria-hidden="true">
                                     </a>
                                 </div>
                                 {% endfor %}
                             </div>
                             <div class="panel-foot">
-                                <img class="status-icon" src="{{ url_for('static', path='/images/status-idle.svg') }}" alt="" aria-hidden="true">
+                                <img class="status-icon" src="{{ url_for('static', path='/images/status-idle.svg').path }}" alt="" aria-hidden="true">
                                 <span id="runtime-protection-note">{{ dashboard.protection_note }}</span>
                             </div>
                         </section>
@@ -151,7 +151,7 @@
                             </div>
                             <div class="empty-state" id="runtime-events-empty" {% if dashboard.events %}hidden{% endif %}>
                                 <div class="empty-icon">
-                                    <img class="icon" src="{{ url_for('static', path='/images/log.svg') }}" alt="" aria-hidden="true">
+                                    <img class="icon" src="{{ url_for('static', path='/images/log.svg').path }}" alt="" aria-hidden="true">
                                 </div>
                                 <h3>这里还很安静</h3>
                                 <p>接入群组后，成员验证与违规处理记录会显示在这里。</p>
@@ -179,16 +179,16 @@
                         </ol>
                         <a class="button button--primary button--full-width button--spread" href="{{ dashboard.next_href }}">
                             {{ dashboard.next_label }}
-                            <img class="button-icon" src="{{ url_for('static', path='/images/arrow-right.svg') }}" alt="" aria-hidden="true">
+                            <img class="button-icon" src="{{ url_for('static', path='/images/arrow-right.svg').path }}" alt="" aria-hidden="true">
                         </a>
                     </section>
                     <section class="panel tips">
-                        <img class="tip-icon" src="{{ url_for('static', path='/images/info.svg') }}" alt="" aria-hidden="true">
+                        <img class="tip-icon" src="{{ url_for('static', path='/images/info.svg').path }}" alt="" aria-hidden="true">
                         <h3>小提示</h3>
                         <p>建议使用 Telegram 超级群，并授予机器人删除消息、封禁成员等所需权限。</p>
                         <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer">
                             <span>打开 BotFather</span>
-                            <img class="button-icon" src="{{ url_for('static', path='/images/arrow-up-right.svg') }}" alt="" aria-hidden="true">
+                            <img class="button-icon" src="{{ url_for('static', path='/images/arrow-up-right.svg').path }}" alt="" aria-hidden="true">
                         </a>
                     </section>
                 </aside>

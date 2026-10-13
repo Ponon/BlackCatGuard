@@ -3,18 +3,18 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{{ page_title }}</title>
-<link rel="icon" type="image/svg+xml" href="{{ url_for('static', path='/images/logo.svg') }}">
-<link rel="stylesheet" href="{{ url_for('static', path='/css/auth.css') }}?v=20261013-10">
-<link rel="stylesheet" href="{{ url_for('static', path='/css/toast.css') }}">
-<script src="{{ url_for('static', path='/js/toast.js') }}?v=20261012-4" defer></script>
-<script src="{{ url_for('static', path='/js/auth.js') }}?v=20261013-10" defer></script>
+<link rel="icon" type="image/svg+xml" href="{{ url_for('static', path='/images/logo.svg').path }}">
+<link rel="stylesheet" href="{{ url_for('static', path='/css/auth.css').path }}?v=20261013-10">
+<link rel="stylesheet" href="{{ url_for('static', path='/css/toast.css').path }}">
+<script src="{{ url_for('static', path='/js/toast.js').path }}?v=20261012-4" defer></script>
+<script src="{{ url_for('static', path='/js/auth.js').path }}?v=20261013-10" defer></script>
 </head>
 <body>
 {% if success %}<div class="error_toast success_toast" role="status">{{ success }}</div>{% endif %}
 {% if error %}<div class="error_toast" role="alert">{{ error }}</div>{% endif %}
 <main class="auth-layout">
 <aside class="brand-panel">
-<a class="brand" href="/login"><img src="{{ url_for('static', path='/images/logo.svg') }}" alt="">黑猫群管</a>
+<a class="brand" href="/login"><img src="{{ url_for('static', path='/images/logo.svg').path }}" alt="">黑猫群管</a>
 <div class="brand-story">
 <div class="cat-scene" aria-label="悬停小猫了解黑猫群管">
 <button type="button" class="cat cat-back" data-cat-message="想进群？先过我这关喵～按钮验证、算术验证，我都会" aria-label="验证猫：了解入群验证" aria-expanded="false"><span class="cat-ear ear-left" aria-hidden="true"></span><span class="cat-ear ear-right" aria-hidden="true"></span><i aria-hidden="true"></i><i aria-hidden="true"></i><span class="cat-face" aria-hidden="true"><span class="cat-nose"></span><span class="cat-mouth"></span><span class="whiskers whiskers-left"></span><span class="whiskers whiskers-right"></span></span><span class="cat-chest" aria-hidden="true"></span><span class="cat-paws" aria-hidden="true"></span></button>
@@ -24,7 +24,7 @@
 <div class="cat-bubble" role="status" aria-live="polite" hidden></div>
 </div>
 </div>
-<a class="opensource" href="https://github.com/Ponon/BlackCatGuard" target="_blank" rel="noopener noreferrer"><img src="{{ url_for('static', path='/images/github.svg') }}" alt="">基于黑猫群管开源构建</a>
+<a class="opensource" href="https://github.com/Ponon/BlackCatGuard" target="_blank" rel="noopener noreferrer"><img src="{{ url_for('static', path='/images/github.svg').path }}" alt="">基于黑猫群管开源构建</a>
 </aside>
 <section class="auth-main"><div class="auth-content {% block width %}{% endblock %}">{% block content %}{% endblock %}</div></section>
 </main></body></html>

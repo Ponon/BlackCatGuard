@@ -1,12 +1,12 @@
         <header class="header">
             <div class="topbar">
                 <a class="brand" href="/" aria-label="黑猫群管首页">
-                    <img class="brand-logo" src="{{ url_for('static', path='/images/logo.svg') }}" alt="">
+                    <img class="brand-logo" src="{{ url_for('static', path='/images/logo.svg').path }}" alt="">
                     <span>黑猫群管</span>
                 </a>
                 <div class="account">
                     <div class="environment">
-                        <img class="environment-icon" src="{{ url_for('static', path='/images/status-online.svg') }}" alt="" aria-hidden="true">
+                        <img class="environment-icon" src="{{ url_for('static', path='/images/status-online.svg').path }}" alt="" aria-hidden="true">
                         <span>本地运行</span>
                     </div>
                     <span class="avatar">{{ username[:1]|upper }}</span>
@@ -19,31 +19,31 @@
             </div>
             <nav class="navigation" aria-label="主导航">
                 <a class="navigation-link{% if active_page not in ['group', 'settings', 'verification', 'antispam', 'broadcast', 'events'] %} navigation-link--active{% endif %}" href="/" {% if active_page not in ['group', 'settings', 'verification', 'antispam', 'broadcast', 'events'] %}aria-current="page"{% endif %}>
-                    <img class="navigation-icon" src="{{ url_for('static', path='/images/dashboard.svg') }}" alt="" aria-hidden="true">
+                    <img class="navigation-icon" src="{{ url_for('static', path='/images/dashboard.svg').path }}" alt="" aria-hidden="true">
                     工作台
                 </a>
                 <a class="navigation-link{% if active_page == 'group' %} navigation-link--active{% endif %}" href="/group" {% if active_page == 'group' %}aria-current="page"{% endif %}>
-                    <img class="navigation-icon" src="{{ url_for('static', path='/images/group.svg') }}" alt="" aria-hidden="true">
+                    <img class="navigation-icon" src="{{ url_for('static', path='/images/group.svg').path }}" alt="" aria-hidden="true">
                     群管理
                 </a>
                 <a class="navigation-link{% if active_page == 'verification' %} navigation-link--active{% endif %}" href="/verification" {% if active_page == 'verification' %}aria-current="page"{% endif %}>
-                    <img class="navigation-icon" src="{{ url_for('static', path='/images/verify.svg') }}" alt="" aria-hidden="true">
+                    <img class="navigation-icon" src="{{ url_for('static', path='/images/verify.svg').path }}" alt="" aria-hidden="true">
                     入群设置
                 </a>
                 <a class="navigation-link{% if active_page == 'antispam' %} navigation-link--active{% endif %}" href="/antispam" {% if active_page == 'antispam' %}aria-current="page"{% endif %}>
-                    <img class="navigation-icon" src="{{ url_for('static', path='/images/rules.svg') }}" alt="" aria-hidden="true">
+                    <img class="navigation-icon" src="{{ url_for('static', path='/images/rules.svg').path }}" alt="" aria-hidden="true">
                     广告拦截
                 </a>
                 <a class="navigation-link{% if active_page == 'broadcast' %} navigation-link--active{% endif %}" href="/broadcast" {% if active_page == 'broadcast' %}aria-current="page"{% endif %}>
-                    <img class="navigation-icon" src="{{ url_for('static', path='/images/broadcast.svg') }}" alt="" aria-hidden="true">
+                    <img class="navigation-icon" src="{{ url_for('static', path='/images/broadcast.svg').path }}" alt="" aria-hidden="true">
                     群广播
                 </a>
                 <a class="navigation-link{% if active_page == 'events' %} navigation-link--active{% endif %}" href="/events" {% if active_page == 'events' %}aria-current="page"{% endif %}>
-                    <img class="navigation-icon" src="{{ url_for('static', path='/images/log.svg') }}" alt="" aria-hidden="true">
+                    <img class="navigation-icon" src="{{ url_for('static', path='/images/log.svg').path }}" alt="" aria-hidden="true">
                     事件日志
                 </a>
                 <a class="navigation-link{% if active_page == 'settings' %} navigation-link--active{% endif %}" href="/settings" {% if active_page == 'settings' %}aria-current="page"{% endif %}>
-                    <img class="navigation-icon" src="{{ url_for('static', path='/images/settings.svg') }}" alt="" aria-hidden="true">
+                    <img class="navigation-icon" src="{{ url_for('static', path='/images/settings.svg').path }}" alt="" aria-hidden="true">
                     系统设置
                 </a>
             </nav>
