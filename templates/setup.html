@@ -1,52 +1,15 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-	<head>
-		<link rel="icon" type="image/svg+xml" href="{{ url_for('static', path='/images/logo.svg') }}">
-		<meta charset="UTF-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<title>{{ page_title }}</title>
-		<link rel="stylesheet" href="{{ url_for('static', path='/css/auth.css') }}">
-			<link rel="stylesheet" href="{{ url_for('static', path='/css/toast.css') }}">
-		<script src="{{ url_for('static', path='/js/toast.js') }}?v=20261012-4" defer></script>
-		<script src="{{ url_for('static', path='/js/auth.js') }}?v=20261012-4" defer></script>
-	</head>
-	<body>
-		{% if error %}
-		<!-- 提示条固定在视口顶部，由 CSS 控制滑入和自动滑出。 -->
-		<div class="error_toast" role="alert">{{ error }}</div>
-		{% endif %}
-		<main class="container">
-			<img class="container_logo" src="{{ url_for('static', path='/images/logo.svg') }}"/>
-			<p class="container_title">创建管理员</p>
-			<p class="container_brief">该账号用于登录黑猫群管后台。</p>
-
-
-
-			<form method="post" action="/setup" class="setup_input" autocomplete="off">
-				<input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-				
-				<div class="setup_input_list">
-					<div class="setup_input_list_item">
-						<img src="{{ url_for('static', path='/images/username.svg') }}" alt="" />
-						<input id="username" name="username" value="{{ username }}" autocomplete="username"
-							pattern="[A-Za-z0-9_]{3,32}" minlength="3" maxlength="32" placeholder="请输入账号" required>
-					</div>
-					
-					<div class="setup_input_list_item">
-						<img src="{{ url_for('static', path='/images/password.svg') }}" alt="" />
-						<input id="password" type="password" name="password" placeholder="请输入密码" autocomplete="new-password"
-							minlength="8" maxlength="128" required>
-					</div>
-					
-					<div class="setup_input_list_item">
-						<img src="{{ url_for('static', path='/images/password.svg') }}" alt="" />
-						<input id="confirm_password" type="password" name="confirm_password" placeholder="再次输入密码"
-							autocomplete="new-password" minlength="8" maxlength="128" required>
-					</div>
-				</div>
-			
-				<button type="submit" class="setup_input_btn">立即创建</button>
-			</form>
-		</main>
-	</body>
-</html>
+{% extends "auth_base.html" %}
+{% block width %}{% if step != 'create' %}terms-content{% endif %}{% endblock %}
+{% block content %}
+<nav class="setup-steps" aria-label="初始化进度"><span {% if step != 'create' %}aria-current="step"{% endif %}><b>1</b>使用须知</span><i></i><span {% if step == 'create' %}aria-current="step"{% endif %}><b>2</b>创建管理员</span></nav>
+{% if step == 'create' %}
+<header class="auth-heading"><h1>创建管理员</h1><p>为你的黑猫群管设置一个管理账号</p></header>
+<form method="post" action="/setup" class="setup_input"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><div class="field"><label for="username">用户名</label><input id="username" name="username" value="{{ username }}" autocomplete="username" pattern="[A-Za-z0-9_]{3,32}" minlength="3" maxlength="32" placeholder="请输入管理员用户名" required></div>
+<div class="field"><label for="password">密码</label><div class="password-field"><input id="password" type="password" name="password" autocomplete="new-password" minlength="8" maxlength="128" placeholder="设置 8～128 位密码" required><button type="button" class="password-toggle" data-password="password" aria-label="显示密码" aria-pressed="false"><img src="{{ url_for('static', path='/images/eye.svg') }}" alt=""></button></div></div><p class="field-help">用户名为 3～32 位字母、数字或下划线</p>
+<div class="field"><label for="confirm_password">确认密码</label><div class="password-field"><input id="confirm_password" type="password" name="confirm_password" autocomplete="new-password" minlength="8" maxlength="128" placeholder="再次输入密码" required><button type="button" class="password-toggle" data-password="confirm_password" aria-label="显示密码" aria-pressed="false"><img src="{{ url_for('static', path='/images/eye.svg') }}" alt=""></button></div></div>
+<button type="submit" class="setup_input_btn">创建管理员</button></form><a class="back-link" href="/setup">返回使用须知</a>
+{% else %}
+<header class="auth-heading"><h1>开始之前，请先了解</h1><p>了解使用边界与数据处理方式，再创建管理员</p></header>
+<article class="terms" tabindex="0" aria-label="使用须知全文">{% include 'setup_terms.html' %}</article>
+<form method="post" action="/setup/consent" class="setup_input consent-form"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="terms_version" value="{{ terms_version }}"><label class="consent"><input type="checkbox" name="accepted" value="yes" required><span>我已阅读并同意使用须知，特别是<strong>数据处理、自动操作风险与责任限制</strong>条款</span></label><button type="submit" class="setup_input_btn">同意并继续</button></form>
+{% endif %}{% endblock %}

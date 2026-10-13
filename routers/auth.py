@@ -1,4 +1,5 @@
 import re
+import time
 from tortoise.exceptions import IntegrityError
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
@@ -12,6 +13,40 @@ from utils.security import (
 from utils.views import templates
 
 router = APIRouter()
+TERMS_VERSION = "2026-10-13"
+CONSENT_MAX_AGE = 3600
+
+
+def has_setup_consent(request):
+    consent = request.session.get("setup_consent", {})
+    if not isinstance(consent, dict):
+        return False
+    accepted_at = consent.get("accepted_at")
+    return (consent.get("version") == TERMS_VERSION
+            and isinstance(accepted_at, (int, float))
+            and 0 <= time.time() - accepted_at <= CONSENT_MAX_AGE)
+
+
+@router.post("/setup/consent")
+async def setup_consent(request: Request, csrf_token: str = Form(...),
+                        accepted: str = Form(""), terms_version: str = Form("")):
+    if await Administrator.exists():
+        return RedirectResponse("/login", status_code=303)
+    if not valid_csrf_token(request, csrf_token):
+        raise HTTPException(status_code=403, detail="表单已过期请刷新页面后重试")
+    if accepted != "yes" or terms_version != TERMS_VERSION:
+        if "application/json" in request.headers.get("accept", ""):
+            return JSONResponse({"error": "请阅读并同意当前使用须知"}, status_code=400)
+        return templates.TemplateResponse(request=request, name="setup.html", context={
+            "page_title": "初始化 · 黑猫群管", "csrf_token": get_csrf_token(request),
+            "error": "请阅读并同意当前使用须知", "username": "",
+            "step": "terms", "terms_version": TERMS_VERSION,
+        }, status_code=400)
+    request.session["setup_consent"] = {"version": TERMS_VERSION, "accepted_at": time.time()}
+    if "application/json" in request.headers.get("accept", ""):
+        return JSONResponse({"redirect": "/setup?step=create"})
+    return RedirectResponse("/setup?step=create", status_code=303)
+
 
 
 # 打开初始化页面
@@ -30,6 +65,8 @@ async def setup_page(request: Request):
             "csrf_token": get_csrf_token(request),
             "error": "",
             "username": "",
+            "terms_version": TERMS_VERSION,
+            "step": "create" if request.query_params.get("step") == "create" and has_setup_consent(request) else "terms",
         },
     )
 
@@ -55,6 +92,11 @@ async def setup_submit(
             detail="表单已过期，请刷新页面后重试。",
         )
 
+    if not has_setup_consent(request):
+        if "application/json" in request.headers.get("accept", ""):
+            return JSONResponse({"error": "请先阅读并同意使用须知", "redirect": "/setup"}, status_code=403)
+        return RedirectResponse("/setup", status_code=303)
+
     # 去掉账号前后的空格，密码保持原样。
     username = username.strip()
 
@@ -65,6 +107,8 @@ async def setup_submit(
         error = "账号需为 3～32 位字母、数字或下划线。"
     elif len(password) < 8:
         error = "密码至少需要 8 位。"
+    elif len(password) > 128:
+        error = "密码最多允许 128 位"
     elif password != confirm_password:
         error = "两次输入的密码不一致。"
 
@@ -81,6 +125,8 @@ async def setup_submit(
                 "csrf_token": get_csrf_token(request),
                 "error": error,
                 "username": username,
+                "step": "create",
+                "terms_version": TERMS_VERSION,
             },
             status_code=400,
         )

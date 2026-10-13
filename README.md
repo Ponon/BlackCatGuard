@@ -68,10 +68,10 @@ cd BlackCatGuard
 
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
-.venv/bin/python -m uvicorn main:app --host 127.0.0.1 --port 8765 --workers 1
+.venv/bin/python -m uvicorn main:app --host 127.0.0.1 --port 1777 --workers 1
 ```
 
-打开 **<http://127.0.0.1:8765>**，首次访问时创建管理员账号。
+打开 **<http://127.0.0.1:1777>**，首次访问时创建管理员账号。
 
 ### 首次配置
 

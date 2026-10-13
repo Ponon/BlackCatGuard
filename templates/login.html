@@ -1,48 +1,5 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-	<head>
-		<link rel="icon" type="image/svg+xml" href="{{ url_for('static', path='/images/logo.svg') }}">
-		<meta charset="UTF-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<title>{{ page_title }}</title>
-		<link rel="stylesheet" href="{{ url_for('static', path='/css/auth.css') }}">
-		<link rel="stylesheet" href="{{ url_for('static', path='/css/toast.css') }}">
-		<script src="{{ url_for('static', path='/js/toast.js') }}?v=20261012-4" defer></script>
-		<script src="{{ url_for('static', path='/js/auth.js') }}?v=20261012-4" defer></script>
-	</head>
-	<body>
-		{% if success %}
-		<div class="error_toast success_toast" role="status">{{ success }}</div>
-		{% endif %}
-		{% if error %}
-		<!-- 提示条固定在视口顶部，由 CSS 控制滑入和自动滑出。 -->
-		<div class="error_toast" role="alert">{{ error }}</div>
-		{% endif %}
-		<main class="container">
-			<img class="container_logo" src="{{ url_for('static', path='/images/logo.svg') }}" />
-			<p class="container_title">欢迎使用黑猫群管</p>
-			<p class="container_brief">请输入您设置的管理员账号和密码完成登陆</p>
-
-			<form method="post" action="/login" class="setup_input">
-				<input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-
-				<div class="setup_input_list">
-					<div class="setup_input_list_item">
-						<img src="{{ url_for('static', path='/images/username.svg') }}" alt="" />
-						<input id="username" name="username" value="{{ username }}" autocomplete="username"
-							pattern="[A-Za-z0-9_]{3,32}" minlength="3" maxlength="32" placeholder="请输入账号" required>
-					</div>
-
-					<div class="setup_input_list_item">
-						<img src="{{ url_for('static', path='/images/password.svg') }}" alt="" />
-						<input id="password" type="password" name="password" placeholder="请输入密码"
-							autocomplete="current-password" minlength="8" maxlength="128" required>
-					</div>
-				</div>
-
-				<button type="submit" class="setup_input_btn">立即登录</button>
-			</form>
-
-		</main>
-	</body>
-</html>
+{% extends "auth_base.html" %}
+{% block content %}<header class="auth-heading"><span class="eyebrow">WELCOME BACK</span><h1>欢迎回来</h1><p>登录管理员账号，继续照看你的群组</p></header>
+<form method="post" action="/login" class="setup_input"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><div class="field"><label for="username">用户名</label><input id="username" name="username" value="{{ username }}" autocomplete="username" pattern="[A-Za-z0-9_]{3,32}" minlength="3" maxlength="32" placeholder="请输入管理员用户名" required></div>
+<div class="field"><label for="password">密码</label><div class="password-field"><input id="password" type="password" name="password" autocomplete="current-password" minlength="8" maxlength="128" placeholder="请输入密码" required><button type="button" class="password-toggle" data-password="password" aria-label="显示密码" aria-pressed="false"><img src="{{ url_for('static', path='/images/eye.svg') }}" alt=""></button></div></div><button type="submit" class="setup_input_btn">登录</button></form>
+<p class="auth-note">仅限此实例的管理员登录</p>{% endblock %}
