@@ -11,7 +11,7 @@
         <script src="{{ url_for('static', path='/js/toast.js').path }}?v=20261012-4" defer></script>
         <script src="{{ url_for('static', path='/js/dashboard.js').path }}" defer></script>
         <script src="{{ url_for('static', path='/js/form-state.js').path }}" defer></script>
-        <script src="{{ url_for('static', path='/js/antispam.js').path }}" defer></script>
+        <script src="{{ url_for('static', path='/js/antispam.js').path }}?v=3" defer></script>
     </head>
     <body>
         {% include 'partials/header.html' %}
@@ -58,7 +58,14 @@
                             </div>
                             <div class="spam-field"><label class="spam-label" for="ai-base-url">接口基础地址</label><input class="spam-input" id="ai-base-url" name="base_url" value="{{ base_url }}" maxlength="2048" placeholder="填写服务商或本地模型基础地址" autocomplete="off"><p class="spam-help">填写服务商提供的基础地址（通常以 /v1 结尾），程序会追加 /chat/completions。</p></div>
                             <div class="spam-field"><label class="spam-label" for="ai-model">模型名称</label><input class="spam-input" id="ai-model" name="model" value="{{ model }}" maxlength="128" placeholder="填写接口支持的模型名称" autocomplete="off"></div>
-                            <div class="spam-field"><label class="spam-label" for="ai-api-key">API Key</label><input class="spam-input" id="ai-api-key" name="api_key" type="password" maxlength="4096" autocomplete="new-password" placeholder="{{ '已保存，留空保留原密钥' if has_api_key else '本地无鉴权服务可留空' }}"><label class="spam-clear-key"><input name="clear_api_key" type="checkbox">清除已保存的密钥</label></div>
+                            <div class="spam-field">
+                                <label class="spam-label" for="ai-api-key">API Key</label>
+                                <div class="secret-field">
+                                    <input class="spam-input" id="ai-api-key" name="api_key" type="password" value="{{ api_key }}" maxlength="4096" autocomplete="new-password" spellcheck="false" placeholder="请输入 API Key">
+                                    <button class="button" id="toggle-ai-key" type="button" aria-label="显示 API Key" aria-controls="ai-api-key" aria-pressed="false"><img class="icon" id="ai-key-eye" src="{{ url_for('static', path='/images/eye.svg').path }}" data-show="{{ url_for('static', path='/images/eye.svg').path }}" data-hide="{{ url_for('static', path='/images/eye-off.svg').path }}" alt=""></button>
+                                </div>
+                                <p class="spam-help">清空 API Key 并保存后自动关闭 AI 识别</p>
+                            </div>
                             <div class="spam-actions"><button class="button button--primary" type="submit">保存 AI 配置</button><span class="spam-help" data-save-state>修改后请保存</span></div>
                         </form>
                     </section>

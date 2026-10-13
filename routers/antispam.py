@@ -50,7 +50,7 @@ async def antispam_page(request: Request):
         'keywords': '\n'.join(keyword.keywords) if keyword else '',
         'ai_enabled': ai_is_enabled(ai, configured),
         'base_url': ai.base_url if ai else '', 'model': ai.model if ai else '',
-        'has_api_key': bool(ai and ai.api_key),
+        'has_api_key': bool(ai and ai.api_key), 'api_key': ai.api_key if ai else '',
         'keyword_saved': keyword is not None, 'ai_saved': ai is not None,
         'actions': actions,
         'whitelist_saved': whitelist is not None,
@@ -81,12 +81,11 @@ async def save_keywords(request: Request, enabled: Annotated[str, Form()] = 'fal
 
 
 @router.post('/antispam/ai')
-async def save_ai(request: Request, enabled: Annotated[str, Form()] = 'false', base_url: Annotated[str, Form()] = '', model: Annotated[str, Form()] = '', api_key: Annotated[str, Form()] = '', clear_api_key: Annotated[str, Form()] = 'false', csrf_token: Annotated[str, Form()] = ''):
+async def save_ai(request: Request, enabled: Annotated[str, Form()] = 'false', base_url: Annotated[str, Form()] = '', model: Annotated[str, Form()] = '', api_key: Annotated[str, Form()] = '', csrf_token: Annotated[str, Form()] = ''):
     await require_admin(request)
     require_csrf(request, csrf_token)
     base_url, model, api_key = base_url.strip().rstrip('/'), model.strip(), api_key.strip()
-    if clear_api_key not in ('true', 'false'):
-        raise HTTPException(status_code=400, detail='密钥清除状态不正确。')
+    enabled = enabled if api_key else 'false'
     if base_url:
         try:
             parsed = urlsplit(base_url)
@@ -104,10 +103,9 @@ async def save_ai(request: Request, enabled: Annotated[str, Form()] = 'false', b
         raise HTTPException(status_code=400, detail='启用 AI 前请填写接口基础地址和模型名称。')
     async with in_transaction():
         await require_group(enabled)
-        old = await AISettings.get_or_none(id=1)
-        key = '' if clear_api_key == 'true' else (api_key or (old.api_key if old else ''))
+        key = api_key
         await AISettings.update_or_create(id=1, defaults={'enabled': enabled == 'true', 'base_url': base_url, 'model': model, 'api_key': key})
-    return {'message': 'AI 识别配置已保存。', 'has_api_key': bool(key), 'base_url': base_url, 'model': model, 'enabled': enabled == 'true'}
+    return {'message': 'AI 识别配置已保存' if key else 'API Key 已清空并关闭 AI 识别', 'has_api_key': bool(key), 'api_key': key, 'base_url': base_url, 'model': model, 'enabled': enabled == 'true'}
 
 
 @router.post('/antispam/test')

@@ -35,6 +35,8 @@ class PushError(Exception):
 
 def event_key(event):
     if event.event_type == '广告拦截':
+        if event.result.startswith('综合判定：正常消息'):
+            return None
         if event.result.startswith('放行'):
             return 'runtime_failed' if '识别异常' in event.result else None
         return 'ad_block' if ('垃圾消息' in event.result or '垃圾信息' in event.result) else 'runtime_failed'

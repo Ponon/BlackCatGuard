@@ -29,7 +29,6 @@ function bindSpamForm(form, onSuccess) {
         }
         const data = new FormData(form);
         if (toggle) data.set('enabled', String(toggle.checked));
-        if (form.elements.clear_api_key) data.set('clear_api_key', String(form.elements.clear_api_key.checked));
         for (const name of ['restrict_user', 'kick_user']) {
             if (form.elements[name]) data.set(name, String(form.elements[name].checked));
         }
@@ -80,9 +79,8 @@ bindSpamForm(keywordForm, result => {
 
 const aiForm = document.querySelector('#ai-form');
 bindSpamForm(aiForm, result => {
-    aiForm.elements.api_key.value = '';
-    aiForm.elements.api_key.placeholder = result.has_api_key ? '已保存，留空保留原密钥' : '本地无鉴权服务可留空';
-    aiForm.elements.clear_api_key.checked = false;
+    aiForm.elements.api_key.value = result.api_key || '';
+    setAIKeyVisible(false);
     aiForm.elements.base_url.value = result.base_url;
     aiForm.elements.model.value = result.model;
     aiForm.elements.enabled.checked = result.enabled;
@@ -122,3 +120,17 @@ updateTestHint();
 
 const moderationActionsForm = document.querySelector('#moderation-actions-form');
 bindSpamForm(moderationActionsForm, result => showError(result.message, true));
+
+
+function setAIKeyVisible(visible) {
+    const input = document.querySelector('#ai-api-key');
+    const button = document.querySelector('#toggle-ai-key');
+    const icon = document.querySelector('#ai-key-eye');
+    input.type = visible ? 'text' : 'password';
+    button.setAttribute('aria-pressed', String(visible));
+    button.setAttribute('aria-label', visible ? '隐藏 API Key' : '显示 API Key');
+    icon.src = visible ? icon.dataset.hide : icon.dataset.show;
+}
+document.querySelector('#toggle-ai-key').addEventListener('click', () => {
+    setAIKeyVisible(document.querySelector('#ai-api-key').type === 'password');
+});

@@ -117,14 +117,7 @@ textarea.spam-input {
     color: #a1a7af;
 }
 
-.spam-clear-key {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    font-size: 12px;
-    color: #92969c;
-    margin-top: 10px;
-}
+
 
 .spam-actions {
     display: flex;

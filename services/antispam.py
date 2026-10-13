@@ -16,6 +16,24 @@ def match_keyword(text, keywords):
     return next((word for word in keywords if word.casefold() in normalized), None)
 
 
+def parse_ai_content(content):
+    """只解析最终答复 不将思考区中的 JSON 当作分类结果"""
+    if not isinstance(content, str):
+        raise ValueError('content must be text')
+    content = content.strip()
+    while content.startswith('<think>'):
+        end = content.find('</think>', len('<think>'))
+        if end < 0:
+            raise ValueError('incomplete reasoning')
+        content = content[end + len('</think>'):].strip()
+    if content.startswith('```') and content.endswith('```'):
+        content = '\n'.join(content.splitlines()[1:-1]).strip()
+    result = json.loads(content)
+    if not isinstance(result, dict) or type(result.get('is_spam')) is not bool or not isinstance(result.get('reason'), str):
+        raise ValueError('invalid classification')
+    return {'is_spam': result['is_spam'], 'reason': result['reason'][:500]}
+
+
 def classify_ai(text, base_url, model, api_key, proxy_url=''):
     payload = {
         'model': model,
@@ -39,16 +57,19 @@ def classify_ai(text, base_url, model, api_key, proxy_url=''):
             raw = response.read(1024 * 1024 + 1)
         if len(raw) > 1024 * 1024:
             raise AIError('AI 返回内容过大。')
-        content = json.loads(raw)['choices'][0]['message']['content'].strip()
-        if content.startswith('```') and content.endswith('```'):
-            content = '\n'.join(content.splitlines()[1:-1])
-        result = json.loads(content)
-        if not isinstance(result, dict) or type(result.get('is_spam')) is not bool or not isinstance(result.get('reason'), str):
-            raise ValueError()
-        return {'is_spam': result['is_spam'], 'reason': result['reason'][:500]}
+        content = json.loads(raw)['choices'][0]['message']['content']
+        return parse_ai_content(content)
     except HTTPError as error:
-        messages = {401: 'AI API Key 无效。', 403: 'AI 接口拒绝访问，请检查权限。', 404: 'AI 接口路径或模型不存在。', 429: 'AI 请求限流或额度不足。'}
-        raise AIError(messages.get(error.code, 'AI 接口请求失败，请检查接口和模型配置。')) from None
+        messages = {
+            400: '请求参数不正确 请检查模型名称和接口地址',
+            401: 'API Key 无效或与接口平台不匹配',
+            403: '接口拒绝访问 请检查模型权限',
+            404: '接口路径或模型不存在',
+            422: '接口不接受当前请求参数 请检查模型和兼容接口',
+            429: '请求限流或额度不足',
+        }
+        message = messages.get(error.code, '服务暂时不可用 请稍后重试' if error.code >= 500 else '请求失败 请检查接口和模型配置')
+        raise AIError(f'AI 接口返回 HTTP {error.code} {message}') from None
     except (URLError, ssl.SSLError, TimeoutError, OSError):
         raise AIError('AI 连接失败，请检查网络、系统代理及证书配置。') from None
     except (ValueError, KeyError, IndexError, TypeError, AttributeError):
@@ -70,13 +91,13 @@ def classify_message(text, keyword_config, ai_config, proxy_url='', whitelist=No
             # 任一命中即成立，无需再产生 AI 请求费用。
             if ai_config and ai_config.enabled:
                 checks.append({'source': 'AI', 'status': '已跳过', 'detail': '关键词已命中，无需再调用 AI。'})
-            return {'is_spam': True, 'checks': checks, 'message': f'垃圾消息：关键词[{word}]命中。'}
+            return {'is_spam': True, 'checks': checks, 'message': f'关键词：命中[{word}]关键词，垃圾信息'}
     if ai_config and ai_config.enabled:
         try:
             result = classify_ai(text, ai_config.base_url, ai_config.model, ai_config.api_key, proxy_url)
             checks.append({'source': 'AI', 'status': '垃圾' if result['is_spam'] else '正常', 'detail': result['reason']})
-            return {'is_spam': result['is_spam'], 'checks': checks, 'message': '垃圾消息：AI 判定命中。' if result['is_spam'] else '本次判断为正常消息。'}
+            return {'is_spam': result['is_spam'], 'checks': checks, 'message': ('AI：' + (' '.join(result['reason'].split()).rstrip('。，, ')[:300] or '判定为垃圾内容') + '，垃圾信息') if result['is_spam'] else '综合判定：正常消息'}
         except AIError as error:
             checks.append({'source': 'AI', 'status': '失败', 'detail': str(error)})
             return {'is_spam': None, 'checks': checks, 'message': '判断未完成：' + str(error)}
-    return {'is_spam': False if checks else None, 'checks': checks, 'message': '本次未命中垃圾规则。' if checks else '没有可用的识别规则，无法判断消息。'}
+    return {'is_spam': False if checks else None, 'checks': checks, 'message': '综合判定：正常消息' if checks else '没有可用的识别规则，无法判断消息。'}

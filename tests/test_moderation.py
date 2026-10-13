@@ -37,7 +37,7 @@ class ModerationTests(unittest.IsolatedAsyncioTestCase):
             await process_job(job.id)
         api.assert_awaited_once_with(self.group, 'deleteMessage', chat_id='-1001', message_id=10)
         event = await EventLog.get()
-        self.assertIn('关键词[广告]命中', event.result)
+        self.assertIn('关键词：命中[广告]关键词，垃圾信息', event.result)
         self.assertIn('已删除消息', event.result)
         self.assertEqual(event.user_id, 123)
         self.assertEqual(event.content, '这是广告')
@@ -219,7 +219,7 @@ class ModerationTests(unittest.IsolatedAsyncioTestCase):
         event = await EventLog.get()
         self.assertEqual(event.content, '大家早上好')
         self.assertEqual(event.user_id, 123)
-        self.assertTrue(event.result.startswith('放行'))
+        self.assertEqual(event.result, '综合判定：正常消息')
         self.assertIsNone(event_key(event))
 
     async def test_disabled_rules_and_media_still_record_messages(self):

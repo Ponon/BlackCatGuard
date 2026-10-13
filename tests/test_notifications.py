@@ -237,3 +237,15 @@ class BarkTransportTests(unittest.TestCase):
             send_bark('https://example.invalid/secret-key', '标题', '正文')
         self.assertTrue(error.exception.uncertain)
         self.assertNotIn('secret-key', str(error.exception))
+
+
+class ClassificationNotificationTests(unittest.TestCase):
+    def test_normal_summary_does_not_notify_and_sources_still_notify(self):
+        from types import SimpleNamespace
+        from services.notifications import event_key
+        for result, expected in (
+            ('综合判定：正常消息', None),
+            ('关键词：命中[日赚]关键词，垃圾信息 已删除消息', 'ad_block'),
+            ('AI：兜售药品广告，垃圾信息 已删除消息', 'ad_block'),
+        ):
+            self.assertEqual(event_key(SimpleNamespace(event_type='广告拦截', result=result)), expected)

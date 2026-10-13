@@ -126,13 +126,10 @@ async def process_job(job_id):
             elif any(check.get('source') == '白名单' for check in result.get('checks', [])):
                 outcome = '放行 白名单用户'
             else:
-                outcome = '放行'
+                outcome = result['message']
             await finish(job, outcome)
             return
-        job.result = result['message'].replace('垃圾消息：', '垃圾信息 ').rstrip('。')
-        ai_reason = next((check['detail'] for check in result.get('checks', []) if check.get('source') == 'AI' and check.get('status') == '垃圾'), '')
-        if ai_reason:
-            job.result += ' 原因 ' + ai_reason[:200]
+        job.result = result['message']
         await job.save(update_fields=['result', 'rule_key'])
     # AI 返回期间可能发生关闭开关、白名单变更或消息编辑，删除前再次检查。
     latest_group = await GroupConfig.get_or_none(id=1)
