@@ -1,7 +1,7 @@
 """启动横幅按数据库启动前状态显示准确提示"""
 import unittest
 from unittest.mock import patch
-from services.startup import log_startup, BANNER, local_access_url
+from services.startup import log_startup, local_access_url
 
 
 class StartupTests(unittest.IsolatedAsyncioTestCase):
@@ -9,7 +9,7 @@ class StartupTests(unittest.IsolatedAsyncioTestCase):
         with self.assertLogs('uvicorn.error', level='INFO') as output:
             await log_startup(database_existed=False)
         text = '\n'.join(output.output)
-        self.assertIn(BANNER, text)
+        self.assertNotIn('█', text)
         for value in ('项目名称：黑猫群管', '项目作者：Ponon', '项目地址：https://github.com/Ponon/BlackCatGuard', '运行状态：正在运行', '未找到数据库，已完成数据初始化创建。'):
             self.assertIn(value, text)
         self.assertNotIn('development', text)

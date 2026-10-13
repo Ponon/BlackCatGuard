@@ -6,14 +6,6 @@ import ipaddress
 
 logger = logging.getLogger('uvicorn.error')
 
-BANNER = """██████╗░░█████╗░███╗░░██╗░█████╗░███╗░░██╗
-██╔══██╗██╔══██╗████╗░██║██╔══██╗████╗░██║
-██████╔╝██║░░██║██╔██╗██║██║░░██║██╔██╗██║
-██╔═══╝░██║░░██║██║╚████║██║░░██║██║╚████║
-██║░░░░░╚█████╔╝██║░╚███║╚█████╔╝██║░╚███║
-╚═╝░░░░░░╚════╝░╚═╝░░╚══╝░╚════╝░╚═╝░░╚══╝"""
-
-
 def local_access_url():
     host = os.environ.get('UVICORN_HOST', '127.0.0.1')
     executable = sys.argv[0].replace('\\', '/')
@@ -48,12 +40,11 @@ async def log_startup(*, database_existed):
     address = os.environ.get('APP_ACCESS_URL', '').strip()
     address_line = f'容器地址：{address}\n' if address else f'访问地址：{local_access_url()}\n'
     logger.info(
-        '\n%s\n\n'
         '项目名称：黑猫群管\n'
         '项目作者：Ponon\n'
         '项目地址：https://github.com/Ponon/BlackCatGuard\n'
         '运行状态：正在运行\n'
         '%s'
         '数据存储：%s\n',
-        BANNER, address_line, storage,
+        address_line, storage,
     )

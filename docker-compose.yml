@@ -13,11 +13,6 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     stop_grace_period: 30s
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
 
 volumes:
   data:
