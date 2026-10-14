@@ -35,34 +35,38 @@
         clearTimers();
         remember(null);
         bar.hidden = true;
-        bar.classList.remove('is-complete');
+        bar.classList.remove('is-complete', 'is-finishing');
         root.removeAttribute('data-page-arrival');
         progress = 0;
     }
     function start(pending = null) {
         clearTimers();
         bar.hidden = false;
-        bar.classList.remove('is-complete');
-        progress = pending ? Math.min(0.9, Math.max(0.1, Number(pending.progress) || 0.1)) : 0.1;
+        bar.classList.remove('is-complete', 'is-finishing');
+        progress = pending ? Math.min(0.92, Math.max(0, Number(pending.progress) || 0)) : 0;
         bar.style.setProperty('--page-progress', progress);
         const startedAt = pending ? pending.startedAt : Date.now();
         remember({ startedAt, progress });
+        // 从零连续推进 越接近完成越慢 避免半秒一次的阶梯跳动
+        const initialProgress = progress;
+        const resumedAt = Date.now();
         interval = setInterval(() => {
-            progress = Math.min(0.92, progress + (0.94 - progress) * 0.12);
+            progress = initialProgress + (0.92 - initialProgress) * (1 - Math.exp(-(Date.now() - resumedAt) / 2500));
             bar.style.setProperty('--page-progress', progress);
             remember({ startedAt, progress });
-        }, 500);
+        }, 100);
         // 请求取消或失败时不让旧页面一直保留进度条
         watchdog = setTimeout(reset, 30000);
     }
     function finish() {
         clearTimers();
         remember(null);
+        bar.classList.add('is-finishing');
         bar.style.setProperty('--page-progress', 1);
         finishTimer = setTimeout(() => {
             bar.classList.add('is-complete');
-            finishTimer = setTimeout(reset, reducedMotion ? 0 : 180);
-        }, reducedMotion ? 0 : 100);
+            finishTimer = setTimeout(reset, reducedMotion ? 0 : 220);
+        }, reducedMotion ? 0 : 420);
     }
     function destination(value, target) {
         if (target && target.toLowerCase() !== '_self') return null;
@@ -98,7 +102,11 @@
     if (pending) {
         start(pending);
         root.setAttribute('data-page-arrival', 'true');
-        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', finish, { once: true });
-        else requestAnimationFrame(finish);
+        // 先绘制上一页进度 再平滑补满 防止新页面直接显示满条
+        const finishAfterPaint = () => requestAnimationFrame(() => requestAnimationFrame(() => {
+            if (!bar.hidden) finish();
+        }));
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', finishAfterPaint, { once: true });
+        else finishAfterPaint();
     } else remember(null);
 })();

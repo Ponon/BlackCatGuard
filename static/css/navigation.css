@@ -9,9 +9,10 @@
     transform-origin: left center;
     opacity: 1;
     pointer-events: none;
-    transition: transform 240ms ease-out, opacity 180ms ease;
+    transition: transform 120ms linear, opacity 220ms ease;
 }
 .page-progress[hidden] { display: none; }
+.page-progress.is-finishing { transition: transform 400ms cubic-bezier(.22, .61, .36, 1), opacity 220ms ease; }
 .page-progress.is-complete { opacity: 0; }
 html[data-page-arrival] :is(.page-heading, main.dashboard, .auth-main) {
     animation: page-arrive 180ms ease-out both;
