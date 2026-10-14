@@ -8,6 +8,9 @@
 <link rel="stylesheet" href="{{ url_for('static', path='/css/toast.css').path }}">
 <script src="{{ url_for('static', path='/js/toast.js').path }}?v=20261012-4" defer></script>
 <script src="{{ url_for('static', path='/js/auth.js').path }}?v=20261013-10" defer></script>
+<link rel="stylesheet" href="{{ url_for('static', path='/css/responsive.css').path }}?v=3">
+<link rel="stylesheet" href="{{ url_for('static', path='/css/navigation.css').path }}?v=2">
+<script src="{{ url_for('static', path='/js/navigation.js').path }}?v=1" defer></script>
 </head>
 <body>
 {% if success %}<div class="error_toast success_toast" role="status">{{ success }}</div>{% endif %}

@@ -140,7 +140,7 @@ async def build_dashboard():
     members_today, blocked_today = await today_counts(bot_key(group.bot_token), group.chat_id) if configured else ('—', '—')
     health = await health_snapshot()
     if configured and enabled_count and not await execution_allowed(group):
-        protection_note = f'已保存 {enabled_count} 项启用设置 当前暂停执行 等待连接恢复'
+        protection_note = f'已保存 {enabled_count} 项启用设置 当前暂停执行 连接恢复后自动继续'
     elif configured and not enabled_count:
         protection_note = '群组防护已关闭 请按需开启入群与广告拦截设置'
     status = health['label']

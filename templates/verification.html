@@ -6,13 +6,16 @@
         <title>{{ page_title }}</title>
         <link rel="icon" type="image/svg+xml" href="{{ url_for('static', path='/images/logo.svg').path }}">
         <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css').path }}?v=7">
-        <link rel="stylesheet" href="{{ url_for('static', path='/css/verification.css').path }}?v=3">
+        <link rel="stylesheet" href="{{ url_for('static', path='/css/verification.css').path }}?v=4">
         <link rel="stylesheet" href="{{ url_for('static', path='/css/toast.css').path }}">
         <script src="{{ url_for('static', path='/js/toast.js').path }}?v=30261012-4" defer></script>
         <script src="{{ url_for('static', path='/js/dashboard.js').path }}" defer></script>
         <script src="{{ url_for('static', path='/js/form-state.js').path }}" defer></script>
         <script src="{{ url_for('static', path='/js/verification.js').path }}?v=5" defer></script>
-    </head>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/responsive.css').path }}?v=3">
+<link rel="stylesheet" href="{{ url_for('static', path='/css/navigation.css').path }}?v=2">
+<script src="{{ url_for('static', path='/js/navigation.js').path }}?v=1" defer></script>
+</head>
     <body>
         {% include 'partials/header.html' %}
         <section class="page-heading">
@@ -134,7 +137,7 @@
                             <span class="small-badge">示意</span>
                         </div>
                         <div class="verification-message">
-                            <p>请完成入群验证。</p>
+                            <p><span class="verification-mention" aria-label="示例成员提及">小黑</span> <span id="preview-instruction">请在 {{ timeout_seconds }} 秒内完成入群验证</span></p>
                             <p class="verification-question" id="preview-question" {% if method == 'button' %}hidden{% endif %}>8 + 5 = ?</p>
                             <div class="verification-preview-answers" id="preview-answers">
                                 {% if method == 'button' %}
@@ -143,6 +146,7 @@
                                     <span class="verification-answer">11</span>
                                     <span class="verification-answer">13</span>
                                     <span class="verification-answer">15</span>
+                                    <span class="verification-answer">17</span>
                                 {% endif %}
                             </div>
                         </div>

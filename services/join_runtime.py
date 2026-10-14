@@ -89,7 +89,12 @@ async def advance(group, session):
     if session.state == 'restricted':
         keyboard = [[{'text': '点击验证' if value == 'ok' else value, 'callback_data': f'join:{session.id}:{value}'} for value in session.choices]]
         await change_state(session, 'sending_prompt')
+        # Telegram 实体长度按 UTF-16 计算 表情昵称也能准确提及
+        mention = {'type': 'text_link', 'offset': 0,
+                   'length': len(nickname(session.user).encode('utf-16-le')) // 2,
+                   'url': f'tg://user?id={session.user_id}'}
         result = await api(group, 'sendMessage', chat_id=session.chat_id, text=session.question,
+                           entities=json.dumps([mention], ensure_ascii=False),
                            reply_markup=json.dumps({'inline_keyboard': keyboard}, ensure_ascii=False))
         await change_state(session, 'pending', message_id=result['message_id'])
         await log(session, '等待验证')
@@ -193,7 +198,7 @@ async def process_join(group, event, update_id):
     # 成员重新加入时废弃旧挑战，旧按钮不能操作新的入群会话。
     await JoinSession.filter(bot_key=key, chat_id=group.chat_id, user_id=user['id']).exclude(state__in=['done', 'welcome']).update(state='abandoned')
     answer, choices = 'ok', ['ok']
-    question = f'{nickname(user)} 请点击下方按钮完成入群验证'
+    question = f'{nickname(user)} 请在 {settings.timeout_seconds} 秒内点击下方按钮完成入群验证' if enabled else ''
     if enabled and settings.method == 'arithmetic':
         left, right = secrets.randbelow(9) + 1, secrets.randbelow(9) + 1
         answer = str(left + right)
@@ -202,7 +207,7 @@ async def process_join(group, event, update_id):
             options.add(str(secrets.randbelow(25)))
         choices = list(options)
         secrets.SystemRandom().shuffle(choices)
-        question = f'{nickname(user)} 请选出正确答案 {left} + {right} = ?'
+        question = f'{nickname(user)} 请在 {settings.timeout_seconds} 秒内选出正确答案以完成入群验证\n{left} + {right} = ?'
     elif enabled:
         choices = ['ok']
     session = await JoinSession.create(id=session_id, bot_key=key, chat_id=group.chat_id, user_id=user['id'], user=user,

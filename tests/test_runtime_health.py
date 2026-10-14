@@ -31,7 +31,7 @@ class HealthTests(unittest.IsolatedAsyncioTestCase):
         with patch('services.runtime_health.inspect_group', return_value={'ok': ok, 'message': '模拟代理连接失败'}):
             await probe_once()
 
-    async def test_three_failures_close_everything_once_and_recovery_does_not_enable(self):
+    async def test_three_failures_pause_once_and_recovery_resumes_without_changing_switches(self):
         await self.probe(True)
         self.assertTrue(await execution_allowed())
         for index in (1, 2):
@@ -41,17 +41,18 @@ class HealthTests(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(await execution_allowed())
         await self.probe(False)
         for model in (VerificationSettings, WelcomeSettings, KeywordSettings, AISettings):
-            self.assertFalse((await model.get()).enabled)
-        self.assertFalse((await BroadcastTask.get()).enabled)
+            self.assertTrue((await model.get()).enabled)
+        self.assertTrue((await BroadcastTask.get()).enabled)
         self.assertFalse(await execution_allowed())
         with self.assertRaises(HTTPException):
             await ensure_can_enable()
         await self.probe(False)
-        self.assertEqual(await EventLog.filter(result__startswith='已关闭 ').count(), 1)
+        self.assertEqual(await EventLog.filter(result__startswith='已暂停 ').count(), 1)
         await self.probe(True)
         self.assertEqual((await health_snapshot())['state'], 'online')
-        self.assertFalse((await BroadcastTask.get()).enabled)
-        self.assertTrue(await EventLog.filter(result__contains='需手动开启').exists())
+        self.assertTrue((await BroadcastTask.get()).enabled)
+        self.assertTrue(await EventLog.filter(result__contains='已自动恢复').exists())
+        self.assertTrue(await execution_allowed())
 
     async def test_no_enabled_features_does_not_log_auto_disable(self):
         for model in (VerificationSettings, WelcomeSettings, KeywordSettings, AISettings, BroadcastTask):
@@ -64,12 +65,12 @@ class HealthTests(unittest.IsolatedAsyncioTestCase):
         recovered = await EventLog.filter(result='连接成功').get()
         self.assertNotIn('已关闭', recovered.result)
 
-    async def test_auto_disable_only_names_enabled_features(self):
+    async def test_pause_only_names_enabled_features(self):
         for model in (WelcomeSettings, KeywordSettings, AISettings, BroadcastTask):
             await model.all().update(enabled=False)
         for _ in range(3):
             await self.probe(False)
-        log = await EventLog.filter(result__startswith='已关闭 ').get()
+        log = await EventLog.filter(result__startswith='已暂停 ').get()
         self.assertIn('入群验证', log.result)
         for name in ('欢迎语', '关键词', 'AI', '广播'):
             self.assertNotIn(name, log.result)
@@ -110,7 +111,7 @@ class HealthTests(unittest.IsolatedAsyncioTestCase):
             ('连接检测', 'Telegram连接重试', '连接失败'),
             ('连接检测', 'Telegram连接重试', '连接失败'),
             ('连接检测', 'Telegram连接重试', '连接失败'),
-            ('运行异常', '超过最大重试次数', '当前没有已启用功能 无需停用'),
+            ('运行异常', '超过最大重试次数', '当前没有已启用功能 无需暂停 继续检测连接'),
             ('系统推送', '推送运行异常', '推送成功'),
         ])
         self.assertEqual(len({r.flow_id for r in rows}), 1)
@@ -120,7 +121,7 @@ class HealthTests(unittest.IsolatedAsyncioTestCase):
         await self.probe(True)
         recovered = await EventLog.all().order_by('-id').limit(2)
         self.assertEqual([(r.event_type, r.result) for r in reversed(recovered)], [
-            ('连接检测', '连接成功'), ('连接恢复', '连接已恢复 功能保持当前开关状态')])
+            ('连接检测', '连接成功'), ('连接恢复', '连接已恢复 当前没有已启用功能')])
         self.assertEqual(recovered[0].parent_event_id, recovered[1].id)
         self.assertEqual(recovered[0].flow_id, rows[0].flow_id)
         await report_connection_fault(self.group, '', '下一次中断')
@@ -218,6 +219,50 @@ class HealthTests(unittest.IsolatedAsyncioTestCase):
         await migrate_runtime_latency()
         self.assertIsNone((await RuntimeHealth.get()).latency_ms)
         self.assertEqual((await health_snapshot())['latency_label'], '—')
+
+
+    async def test_paused_switches_survive_and_manual_disable_is_respected(self):
+        for _ in range(3):
+            await self.probe(False)
+        self.assertTrue((await RuntimeHealth.get()).stopped)
+        self.assertTrue((await KeywordSettings.get()).enabled)
+        await KeywordSettings.all().update(enabled=False)
+        await BroadcastTask.filter(id=self.task.id).update(enabled=False)
+        await self.probe(True)
+        self.assertFalse((await RuntimeHealth.get()).stopped)
+        self.assertTrue(await execution_allowed())
+        self.assertFalse((await KeywordSettings.get()).enabled)
+        self.assertFalse((await BroadcastTask.get()).enabled)
+        self.assertTrue((await VerificationSettings.get()).enabled)
+        recovered = await EventLog.get(event_type='连接恢复')
+        self.assertIn('已自动恢复', recovered.result)
+        self.assertNotIn('关键词拦截', recovered.result)
+        self.assertNotIn('广播任务', recovered.result)
+
+    async def test_recovery_discards_elapsed_broadcast_slots_and_keeps_future_slots(self):
+        from dao.models import BroadcastSchedule
+        from services.broadcast_scheduler import rule_key
+        now = time.time()
+        await BroadcastTask.filter(id=self.task.id).update(schedule_mode='interval', interval_minutes=2)
+        task = await BroadcastTask.get(id=self.task.id)
+        progress = await BroadcastSchedule.create(task_id=task.id, fingerprint=rule_key(task), next_due=now - 5)
+        for _ in range(3):
+            await self.probe(False)
+        self.assertTrue(await BroadcastSchedule.filter(id=progress.id).exists())
+        await self.probe(True)
+        updated = await BroadcastSchedule.get(id=progress.id)
+        self.assertGreater(updated.next_due, now + 119)
+        self.assertTrue((await BroadcastTask.get()).enabled)
+
+    async def test_repeated_failures_keep_configuration_and_only_one_pause_notice(self):
+        await KeywordSettings.all().update(keywords=['保留配置'])
+        for _ in range(6):
+            await self.probe(False)
+        self.assertEqual((await KeywordSettings.get()).keywords, ['保留配置'])
+        self.assertTrue((await KeywordSettings.get()).enabled)
+        self.assertEqual(await EventLog.filter(event_type='运行异常').count(), 1)
+        self.assertEqual(await EventLog.filter(event_type='连接检测').count(), 3)
+        self.assertFalse(await execution_allowed())
 
 
 class RetryDelayTests(unittest.IsolatedAsyncioTestCase):

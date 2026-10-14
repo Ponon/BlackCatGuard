@@ -1,0 +1,160 @@
+/* 只在平板和手机宽度覆盖样式 桌面端保留原有布局 */
+@media (max-width: 1199px) {
+    .topbar, .navigation, .page-heading, .dashboard { width: calc(100% - 48px); }
+    .navigation { gap: 24px; }
+    :is(.settings-layout, .group-layout, .verification-layout, .spam-layout, .broadcast-layout) {
+        grid-template-columns: minmax(0, 1fr) 300px;
+    }
+    :is(.settings-main, .spam-main, .broadcast-main, .group-layout > *, .verification-layout > *, .sidebar) { min-width: 0; }
+    :is(.events-dialog, .broadcast-dialog) { max-width: calc(100vw - 32px); }
+    /* 模块之间只由容器的 gap 控制 不叠加卡片外边距 */
+    :is(.content-grid, .group-layout, .verification-layout, .spam-layout, .broadcast-layout, .settings-layout,
+        .main-column, .sidebar, .settings-main) { gap: 16px; }
+    :is(.group-layout, .verification-layout, .spam-layout, .broadcast-layout) > div { display: grid; gap: 16px; min-width: 0; }
+    .dashboard .panel, .spam-main > .spam-card + .spam-card { margin-top: 0; margin-bottom: 0; }
+    .content-grid { margin-top: 16px; }
+    .page-footer { margin: 16px 0 0; padding: 0 0 16px; line-height: 20px; }
+    :is(.group-layout, .verification-layout, .spam-layout, .broadcast-layout) .page-footer { margin-top: 0; }
+
+    .events-table { min-width: 0; }
+    .events-table :is(th, td):nth-child(1) { width: 168px; }
+    .events-table :is(th, td):nth-child(2) { width: 88px; }
+    .events-table :is(th, td):nth-child(3) { display: none; }
+    .events-table :is(th, td):nth-child(4) { width: 136px; }
+    .events-table :is(th, td):nth-child(5) { width: 24%; }
+    .events-table-wrap { overflow-x: hidden; }
+    .events-table .events-empty { width: auto; }
+    .auth-layout { flex-wrap: nowrap; }
+    .brand-panel { flex-basis: 40%; min-width: 0; padding: 32px 24px; }
+    .auth-main { flex-basis: 60%; padding: 36px 24px; }
+    .cat-scene { height: 380px; }
+}
+
+@media (max-width: 1023px) {
+    :is(.content-grid, .settings-layout, .group-layout, .verification-layout, .spam-layout, .broadcast-layout) {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .sidebar { grid-template-columns: minmax(0, 1fr); align-items: start; }
+    .broadcast-layout > .sidebar > :first-child { grid-column: 1 / -1; }
+    .broadcast-button-row { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) 70px auto; }
+    .events-pagination { gap: 16px; }
+    :is(.group-layout, .verification-layout, .spam-layout, .broadcast-layout) > div { display: contents; }
+    :is(.group-layout, .verification-layout, .spam-layout, .broadcast-layout) > .sidebar { order: 1; }
+    :is(.group-layout, .verification-layout, .spam-layout, .broadcast-layout) .page-footer { order: 2; }
+    .group-layout > .sidebar { grid-template-columns: minmax(0, 1fr); }
+    .content-grid { row-gap: 16px; }
+    .content-grid > .home-main { display: contents; }
+    .content-grid > .sidebar { order: 1; }
+    .content-grid .page-footer { order: 2; margin-top: 0; }
+    /* 页脚只保留一层间距 避免网格 gap 与旧版 padding 叠加 */
+    .page-footer { margin: 16px 0 0; padding: 0 0 16px; line-height: 20px; }
+    :is(.group-layout, .verification-layout, .spam-layout, .broadcast-layout) { row-gap: 16px; }
+    :is(.group-layout, .verification-layout, .spam-layout, .broadcast-layout) .page-footer { margin-top: 0; }
+    .auth-layout { display: block; }
+    .brand-panel { flex: 0 0 100%; min-height: 0; padding: 24px 32px 0; background: #fff; }
+    .brand-panel .brand-story, .brand-panel .opensource { display: none; }
+    .auth-main { flex: 0 0 100%; align-items: flex-start; padding: 40px 32px; }
+}
+
+@media (max-width: 600px) {
+    .topbar, .navigation, .page-heading, .dashboard { width: calc(100% - 32px); }
+    .topbar { height: 64px; gap: 12px; }
+    .account { gap: 8px; }
+    .environment, .account-name { display: none; }
+    .logout-form { margin-left: 0; }
+    .logout-form .text-button { padding: 10px 0 10px 6px; font-size: 12px; }
+    .navigation { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; overflow: visible; }
+    .navigation-link { justify-content: center; gap: 4px; padding: 11px 2px; font-size: 12px; }
+    .navigation-icon { display: none; }
+    .page-heading { padding: 24px 0; gap: 12px; align-items: flex-start; }
+    h1 { font-size: 23px; }
+    .page-heading p { font-size: 12px; }
+    .page-heading > .button { flex-shrink: 0; padding: 8px 10px; font-size: 12px; }
+    .page-heading > .button .button-icon { display: none; }
+    .badge { font-size: 10px; }
+    .title-line { gap: 8px; }
+    :is(.overview, .features, .events, .group-config, .group-check, .verification-config, .verification-preview,
+        .verification-runtime, .spam-card, .broadcast-card, .network-settings, .push-settings,
+        .account-settings, .log-settings, .events-panel) { padding: 16px; }
+    :is(.content-grid, .settings-layout, .group-layout, .verification-layout, .spam-layout, .broadcast-layout, .main-column, .sidebar) { gap: 16px; }
+    .sidebar { grid-template-columns: minmax(0, 1fr); }
+    .content-grid > .sidebar, .settings-layout > aside { display: none; }
+    .section-heading { gap: 12px; align-items: flex-start; }
+    .section-heading p { line-height: 1.7; }
+    .section-heading > .button { flex-shrink: 0; }
+    .stats { gap: 10px; margin-top: 16px; }
+    .stat { padding: 12px; }
+    .stat-icon { display: none; }
+    .stat-label { font-size: 12px; }
+    .stat-value { font-size: 24px; }
+    .stat-value--text { font-size: 17px; }
+    .stat-connection { gap: 7px; }
+    .feature-row { display: grid; grid-template-columns: 31px minmax(0, 1fr) auto; gap: 4px 10px; padding: 14px 10px; }
+    .feature-icon { grid-column: 1; grid-row: 1 / 3; }
+    .feature-copy { grid-column: 2; grid-row: 1; min-width: 0; }
+    .feature-description { display: none; }
+    .feature-row > .muted-status { grid-column: 2; grid-row: 2; }
+    .feature-row > .button { grid-column: 3; grid-row: 1 / 3; }
+    :is(.config-actions, .settings-actions, .spam-actions, .broadcast-actions, .verification-actions,
+        .verification-variables, .broadcast-variable) { flex-wrap: wrap; gap: 10px; }
+    :is(.verification-heading, .spam-heading, .broadcast-heading) { gap: 10px; }
+    :is(.verification-switch-area, .spam-switch-area) { flex-shrink: 0; }
+    :is(.config-input, .settings-input, .verification-input, .spam-input, .broadcast-input, .field input) { font-size: 16px; min-width: 0; }
+    .button { min-height: 40px; }
+    .secret-field > .button { padding: 10px 12px; }
+    .broadcast-button-row { grid-template-columns: minmax(0, 1fr) 80px auto; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+    .broadcast-button-row > :nth-child(2) { grid-column: 1 / -1; grid-row: 2; }
+    .broadcast-time-row { max-width: 100%; }
+    .broadcast-variable .button { flex-shrink: 0; }
+    .broadcast-list-table :is(th, td) { padding: 10px 6px; font-size: 12px; }
+    .broadcast-task-actions button + button { margin-left: 8px; }
+    .broadcast-dialog, .events-dialog { padding: 20px; }
+    :is(.broadcast-heading, .verification-heading, .spam-heading) > .button { flex-shrink: 0; white-space: nowrap; }
+    .group-id-help summary { display: inline-block; white-space: nowrap; }
+    .broadcast-list { overflow-x: hidden; }
+    .broadcast-list-table, .broadcast-list-table tbody { display: block; }
+    .broadcast-list-table thead { display: none; }
+    .broadcast-list-table tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px 8px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+    .broadcast-list-table tr:last-child { border: 0; padding-bottom: 0; }
+    .broadcast-list-table td { border: 0; padding: 0; }
+    .broadcast-list-table td:first-child { grid-column: 1; grid-row: 1; font-weight: 500; }
+    #broadcast-task-list td:nth-child(2) { grid-column: 1; grid-row: 2; }
+    #broadcast-task-list td:nth-child(3) { grid-column: 2; grid-row: 2; justify-self: end; }
+    #broadcast-task-list td:nth-child(4) { grid-column: 2; grid-row: 1; }
+    .broadcast-task-actions .text-button { min-height: 32px; min-width: 32px; }
+    .push-events { gap: 12px; }
+    .push-event { align-items: flex-start; }
+    .recent-events-table :is(th, td), .events-table :is(th, td) { padding: 10px 6px; font-size: 12px; }
+    .recent-events-table :is(th, td):nth-child(1) { display: none; }
+    .events-table :is(th, td):nth-child(4) { display: none; }
+    .recent-events-table :is(th, td):nth-child(2), .events-table :is(th, td):nth-child(2) { width: 64px; min-width: 0; }
+    .recent-events-table :is(th, td):nth-child(3), .events-table :is(th, td):nth-child(5) { width: 28%; }
+    /* 完整日志在手机端按记录排列 保留时间 事件和内容 */
+    .events-table, .events-table tbody { display: block; }
+    .events-table thead { display: none; }
+    .events-table tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; padding: 12px 0; border-bottom: 1px solid var(--line); }
+    .events-table tbody tr:last-child { border-bottom: 0; }
+    .events-table td { border: 0; padding: 2px 0; }
+    .events-table td:nth-child(1) { display: block; width: auto; grid-column: 1; grid-row: 1; color: #858a91; }
+    .events-table td:nth-child(2) { width: auto; grid-column: 2; grid-row: 1; color: #727984; padding-left: 8px; }
+    .events-table td:nth-child(5) { width: auto; grid-column: 1 / -1; grid-row: 2; font-weight: 500; }
+    .events-table td:nth-child(6) { grid-column: 1 / -1; grid-row: 3; color: #727984; }
+    .events-table td.events-empty { grid-column: 1 / -1; grid-row: 1; padding: 40px 0; text-align: center; }
+    .events-pagination { align-items: flex-start; }
+    .events-controls { width: 100%; justify-content: space-between; gap: 8px; }
+    .events-size { gap: 8px; font-size: 12px; }
+    .events-pages { flex-wrap: wrap; gap: 5px; }
+    .events-pages .button { min-width: 32px; padding: 6px 8px; }
+    .error_toast { max-width: calc(100vw - 32px); overflow-wrap: anywhere; }
+    .brand-panel { padding: 24px 20px 0; }
+    .brand-panel .brand { font-size: 16px; }
+    .auth-main { padding: 32px 20px; }
+    .auth-heading { margin-bottom: 24px; }
+    .auth-heading h1 { font-size: 26px; }
+    .auth-heading p { font-size: 13px; }
+    .setup-steps { gap: 10px; font-size: 12px; }
+    .terms { max-height: 42svh; }
+    .consent { align-items: flex-start; }
+    .consent input { margin-top: 2px; }
+}

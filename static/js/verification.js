@@ -5,10 +5,14 @@ const welcomeForm = document.querySelector('#welcome-form');
 function updateVerificationPreview() {
     updateWelcomeFlow();
     const arithmetic = verificationForm.elements.method.value === 'arithmetic';
+    const seconds = Number(verificationForm.elements.timeout_seconds.value);
+    const validTimeout = Number.isInteger(seconds) && seconds >= 10 && seconds <= 3600;
+    const duration = validTimeout ? `${seconds} 秒内` : '有效时间内';
+    document.querySelector('#preview-instruction').textContent = `请在 ${duration}${arithmetic ? '选出正确答案以完成入群验证' : '点击下方按钮完成入群验证'}`;
     document.querySelector('#preview-question').hidden = !arithmetic;
     const answers = document.querySelector('#preview-answers');
     answers.replaceChildren();
-    for (const text of arithmetic ? ['11', '13', '15'] : ['点击验证']) {
+    for (const text of arithmetic ? ['11', '13', '15', '17'] : ['点击验证']) {
         const answer = document.createElement('span');
         answer.className = 'verification-answer';
         answer.textContent = text;

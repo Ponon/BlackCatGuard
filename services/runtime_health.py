@@ -1,4 +1,4 @@
-"""独立后台健康监测，单次失败不关闭功能，连续三次失败自动停用。"""
+"""独立后台健康监测，单次失败不关闭功能，连续三次重试失败暂停执行 恢复后自动继续。"""
 import asyncio
 import fcntl
 import hashlib
@@ -50,7 +50,7 @@ async def ensure_can_enable():
     from fastapi import HTTPException
     health = await current_health()
     if health and (health.stopped or time.time() - health.checked_at > STALE_AFTER):
-        raise HTTPException(status_code=503, detail='连接异常请等待连接恢复后手动开启')
+        raise HTTPException(status_code=503, detail='连接异常 当前暂停执行 恢复后自动继续')
 
 
 def present_health(state, label, health=None):
@@ -126,6 +126,19 @@ async def report_connection_fault(group, proxy, reason):
             await announce_connection_fault(health, reason)
 
 
+async def enabled_features():
+    names = []
+    for model, label in ((VerificationSettings, '入群验证'), (WelcomeSettings, '入群欢迎语'),
+                         (KeywordSettings, '关键词拦截'), (AISettings, 'AI 识别'),
+                         (BroadcastSettings, '旧版循环广播')):
+        if await model.filter(enabled=True).exists():
+            names.append(label)
+    count = await BroadcastTask.filter(enabled=True).count()
+    if count:
+        names.append(f'{count} 个广播任务')
+    return names
+
+
 async def record_probe(group, proxy, result):
     """调用方持有 probe_lock；同一配置的手动与后台检测使用同一状态记录。"""
     key = config_key(group, proxy)
@@ -145,8 +158,16 @@ async def record_probe(group, proxy, result):
         if result.get('ok'):
             if was_failed:
                 await record_event(flow_id=health.flow_id, event_type='连接检测', content='Telegram连接重试', result='连接成功')
-                await record_event(flow_id=health.flow_id, event_type='连接恢复', content='Telegram 连接恢复正常',
-                                   result='连接已恢复 功能保持当前开关状态')
+                active = await enabled_features()
+                recovery = '连接已恢复 当前没有已启用功能'
+                if active:
+                    prefix = '连接已恢复 已自动恢复 ' if health.stopped else '连接已恢复 已启用功能继续运行 '
+                    recovery = prefix + '、'.join(active)
+                # 恢复时仅保留未来时间点 已错过的广播不补发
+                from services.broadcast_scheduler import next_due
+                for task in await BroadcastTask.filter(enabled=True):
+                    await BroadcastSchedule.filter(task_id=task.id, next_due__lte=now).update(next_due=next_due(task, now))
+                await record_event(flow_id=health.flow_id, event_type='连接恢复', content='Telegram 连接恢复正常', result=recovery)
             health.state, health.failures, health.stopped = 'online', 0, False
             health.last_success, health.reason = now, ''
         else:
@@ -164,20 +185,11 @@ async def record_probe(group, proxy, result):
             if not health.stopped:
                 await record_event(flow_id=health.flow_id, event_type='连接检测', content='Telegram连接重试', result='连接失败')
                 if health.failures == 3:
-                    disabled = []
-                    for model, label in ((VerificationSettings, '入群验证'), (WelcomeSettings, '入群欢迎语'),
-                                         (KeywordSettings, '关键词拦截'), (AISettings, 'AI 识别'),
-                                         (BroadcastSettings, '旧版循环广播')):
-                        if await model.filter(enabled=True).update(enabled=False):
-                            disabled.append(label)
-                    count = await BroadcastTask.filter(enabled=True).update(enabled=False)
-                    if count:
-                        disabled.append(f'{count} 个广播任务')
-                    await BroadcastSchedule.all().delete()
+                    active = await enabled_features()
                     health.stopped = True
                     await record_event(flow_id=health.flow_id, event_type='运行异常', content='超过最大重试次数',
-                        result=('已关闭 ' + '、'.join(disabled) + ' 恢复后需手动开启')
-                               if disabled else '当前没有已启用功能 无需停用')
+                        result=('已暂停 ' + '、'.join(active) + ' 保留开关 连接恢复后自动继续')
+                               if active else '当前没有已启用功能 无需暂停 继续检测连接')
         latency = result.get('latency_ms')
         health.latency_ms = latency if result.get('ok') and type(latency) is int and latency > 0 else None
         health.checked_at = now

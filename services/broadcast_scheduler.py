@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from dao.models import BroadcastTask, BroadcastSchedule, BroadcastAttempt, EventLog
 from tortoise.transactions import in_transaction
 from services.broadcast_delivery import deliver_broadcast
+from services.runtime_health import execution_allowed
 from utils.dates import BEIJING_TIME
 
 
@@ -67,11 +68,12 @@ async def tick(now=None):
             if claimed:
                 await BroadcastAttempt.get_or_create(id=attempt_id, defaults={'task_id': task.id, 'state': 'queued', 'started_at': time.time()})
         if claimed:
-            if now - progress.next_due < 60:
+            allowed = await execution_allowed()
+            if allowed and now - progress.next_due < 60:
                 await deliver_broadcast(task.id, attempt_id=attempt_id)
             else:
                 await BroadcastAttempt.filter(id=attempt_id).update(state='skipped')
-                await EventLog.create(event_type='群广播', content=f'任务 {task.id}', result='错过计划发送时间 已跳过且不补发')
+                await EventLog.create(event_type='群广播', content=f'任务 {task.id}', result='错过计划发送时间 已跳过且不补发' if allowed else '连接异常 本次计划已跳过且不补发')
 
 
 

@@ -13,10 +13,13 @@ class SchedulerTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         await Tortoise.init(db_url='sqlite://:memory:', modules={'models': ['dao.models']})
         await Tortoise.generate_schemas()
+        self.gate = patch('services.broadcast_scheduler.execution_allowed', new_callable=AsyncMock, return_value=True)
+        self.gate.start()
         self.content = await BroadcastContent.create(name='公告', message='测试')
         self.now = datetime(2026, 10, 12, 8, 59, tzinfo=BEIJING_TIME).timestamp()
 
     async def asyncTearDown(self):
+        self.gate.stop()
         await Tortoise.close_connections()
 
     async def test_daily_claim_once_and_multiple_times(self):
@@ -60,3 +63,17 @@ class SchedulerTests(unittest.IsolatedAsyncioTestCase):
         task = await BroadcastTask.create(content=self.content, times=['09:00', '10:00'])
         self.assertEqual(next_due(task, self.now), self.now + 60)
         self.assertEqual(next_due(task, self.now + 3660), self.now + 86460)
+
+
+    async def test_paused_connection_skips_due_slot_without_disabling_task(self):
+        task = await BroadcastTask.create(content=self.content, enabled=True, times=['09:00', '10:00'])
+        with patch('services.broadcast_scheduler.deliver_broadcast', new_callable=AsyncMock) as send:
+            await tick(self.now)
+            with patch('services.broadcast_scheduler.execution_allowed', new_callable=AsyncMock, return_value=False):
+                await tick(self.now + 60)
+            send.assert_not_awaited()
+            self.assertTrue((await BroadcastTask.get(id=task.id)).enabled)
+            await tick(self.now + 61)
+            send.assert_not_awaited()
+            await tick(self.now + 3660)
+            send.assert_awaited_once()

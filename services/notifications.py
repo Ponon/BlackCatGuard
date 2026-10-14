@@ -69,7 +69,7 @@ def notification_body(event, key):
     if key == 'connection_failed':
         body = 'Telegram 连接中断，正在检测重试'
     elif key == 'connection_restored':
-        body = 'Telegram 连接已恢复，功能保持当前开关状态'
+        body = result
     elif key == 'runtime_failed':
         subject = 'Telegram 连续重试 3 次失败' if event.content == '超过最大重试次数' else compact_text(event.content, 45)
         body = f'{subject}，{result}'

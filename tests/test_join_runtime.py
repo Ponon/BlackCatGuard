@@ -329,3 +329,24 @@ class JoinTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn('deleteMessage', methods)
         self.assertIn('restrictChatMember', methods)
         self.assertEqual((await JoinSession.get()).state, 'welcome')
+
+
+    async def test_verification_mentions_member_by_id_without_username(self):
+        import json
+        user = self.event['new_chat_member']['user']
+        user.pop('username')
+        user['first_name'] = '🐈 小黑 <喵>'
+        for index, method in enumerate(('button', 'arithmetic'), 1200):
+            await VerificationSettings.all().update(method=method)
+            await JoinSession.all().delete()
+            self.calls.clear()
+            await process_join(self.group, self.event, index)
+            params = next(params for name, params in self.calls if name == 'sendMessage')
+            entity = json.loads(params['entities'])[0]
+            self.assertEqual(entity['url'], 'tg://user?id=123')
+            self.assertEqual(entity['offset'], 0)
+            self.assertEqual(entity['length'], len(user['first_name'].encode('utf-16-le')) // 2)
+            self.assertTrue(params['text'].startswith(user['first_name']))
+            self.assertIn('请在 60 秒内', params['text'])
+            self.assertNotIn('超时将被', params['text'])
+            self.assertNotIn('parse_mode', params)

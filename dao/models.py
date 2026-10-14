@@ -216,7 +216,7 @@ class RuntimeHealth(Model):
     checked_at = fields.FloatField(default=0)
     latency_ms = fields.IntField(null=True)
     last_success = fields.FloatField(default=0)
-    stopped = fields.BooleanField(default=False)
+    stopped = fields.BooleanField(default=False, description="连接异常时暂停执行 不修改功能开关")
     reason = fields.CharField(max_length=500, default='')
     flow_id = fields.CharField(max_length=128, default='')
 
