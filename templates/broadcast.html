@@ -106,6 +106,16 @@
                                 <div class="broadcast-time-editor" id="broadcast-time-editor"></div>
                                 <p class="broadcast-help">可设置多个时间，如 01:00、02:00，表示当天各发一次；重复时间自动合并。</p>
                             </div>
+                            <div class="broadcast-field broadcast-option">
+                                <div>
+                                    <label class="broadcast-label" for="broadcast-delete-previous">自动删除上一条广播</label>
+                                    <p class="broadcast-help">开启后，在本任务下一次发送前删除本任务上一条成功发送的消息。</p>
+                                </div>
+                                <label class="broadcast-switch">
+                                    <input id="broadcast-delete-previous" name="delete_previous" type="checkbox" role="switch" aria-label="自动删除上一条广播" value="true">
+                                    <span class="broadcast-switch-track" aria-hidden="true"></span>
+                                </label>
+                            </div>
                             <div class="broadcast-actions">
                                 <button class="button button--primary" type="submit">保存循环任务</button>
                                 <button class="button" id="new-broadcast-task" type="button">新建任务</button>

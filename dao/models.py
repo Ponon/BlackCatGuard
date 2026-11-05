@@ -157,6 +157,7 @@ class BroadcastTask(Model):
     interval_minutes = fields.IntField(default=60)
     times = fields.JSONField(default=lambda: ['09:00'])
     weekdays = fields.JSONField(default=lambda: list(range(7)))
+    delete_previous = fields.BooleanField(default=False)
 
     class Meta:
         table = 'broadcast_tasks'
@@ -228,9 +229,13 @@ class BroadcastAttempt(Model):
     """发送前先落库，发送结果不确定时不重复投递。"""
     id = fields.CharField(max_length=64, pk=True)
     task_id = fields.IntField()
+    bot_key = fields.CharField(max_length=64, default='')
+    chat_id = fields.CharField(max_length=32, default='')
     state = fields.CharField(max_length=16, default='sending')
     started_at = fields.FloatField()
     content = fields.TextField(default='')
+    message_id = fields.BigIntField(null=True)
+    message_deleted = fields.BooleanField(default=False)
 
     class Meta:
         table = 'broadcast_attempts'

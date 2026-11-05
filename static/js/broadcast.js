@@ -213,6 +213,7 @@ function loadTask(task) {
     taskForm.elements.content_id.value = task ? task.content_id : 0;
     taskForm.elements.schedule_mode.value = task ? task.schedule_mode : 'daily';
     taskForm.elements.interval_minutes.value = task ? task.interval_minutes : 60;
+    taskForm.elements.delete_previous.checked = Boolean(task && task.delete_previous);
     timeEditor.replaceChildren();
     for (const time of task && task.times.length ? task.times : ['']) addTime(time);
     syncTaskFields();

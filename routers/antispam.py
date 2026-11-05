@@ -13,7 +13,6 @@ from tortoise.transactions import in_transaction
 from dao.models import ModerationSettings, Administrator, KeywordSettings, AISettings, WhitelistSettings, EventLog
 from routers.group import require_admin, require_csrf
 from services.antispam import classify_message
-from services.network import get_proxy_url
 from utils.security import get_csrf_token
 from utils.views import templates
 from services.configuration import group_is_configured, keyword_is_enabled, ai_is_enabled
@@ -126,7 +125,7 @@ async def test_message(request: Request, text: Annotated[str, Form()] = '', csrf
     entries = whitelist.entries if whitelist else []
     if keyword is None and ai is None and not entries:
         raise HTTPException(status_code=400, detail='请先保存关键词或完整的 AI 配置')
-    result = await run_in_threadpool(classify_message, text, keyword, ai, await get_proxy_url(), entries, user_id, username)
+    result = await run_in_threadpool(classify_message, text, keyword, ai, entries, user_id, username)
     await EventLog.create(event_type='消息测试', content=text, user_id=int(user_id) if user_id else None, result=result['message'][:500])
     return result
 

@@ -7,8 +7,8 @@ from fastapi import HTTPException
 from starlette.requests import Request
 from tortoise import Tortoise
 
-from dao.models import Administrator, BroadcastContent, BroadcastTask, BroadcastSettings, GroupConfig, EventLog, SystemSettings
-from dao.database import migrate_broadcast_settings, migrate_daily_broadcast_tasks
+from dao.models import Administrator, BroadcastAttempt, BroadcastContent, BroadcastTask, BroadcastSettings, GroupConfig, EventLog, SystemSettings
+from dao.database import migrate_broadcast_settings, migrate_daily_broadcast_tasks, migrate_broadcast_message_cleanup
 from main import app
 from routers.broadcast import broadcast_page, save_content, delete_content, save_task, delete_task, toggle_task, validate_buttons
 from routers.group import save_config
@@ -48,6 +48,7 @@ class BroadcastTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn('name="enabled"', task_form)
         self.assertNotIn('name="name"', task_form)
         self.assertNotIn('任务名称', task_form)
+        self.assertIn('name="delete_previous"', task_form)
         self.assertLess(html.index('href="/antispam"'), html.index('href="/broadcast"'))
         self.assertIn('多个时间', html)
         self.assertNotIn('每周定时', html)
@@ -68,6 +69,14 @@ class BroadcastTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(edited['task']['content_id'], second['id'])
         self.assertEqual(edited['task']['times'], ['03:00'])
         self.assertEqual(await BroadcastTask.all().count(), 2)
+
+    async def test_delete_previous_option_is_saved_per_task(self):
+        content = (await self.content())['content']
+        result = await self.task(content['id'], delete_previous=True)
+        self.assertTrue(result['task']['delete_previous'])
+        edited = await self.task(content['id'], task_id=result['task']['id'], times='10:00')
+        self.assertFalse(edited['task']['delete_previous'])
+        self.assertFalse((await BroadcastTask.get(id=result['task']['id'])).delete_previous)
 
 
     async def test_enable_gate_and_group_clear_preserves_content(self):
@@ -184,6 +193,78 @@ class BroadcastTests(unittest.IsolatedAsyncioTestCase):
             self.assertIsNone(await deliver_broadcast(task['id']))
             sender.assert_not_called()
         self.assertEqual(await EventLog.all().count(), 1)
+
+    async def test_delivery_without_group_configuration_is_recorded(self):
+        await GroupConfig.create(id=1, bot_token='secret', chat_id='-1001', revision='test')
+        content = (await self.content())['content']
+        task = (await self.task(content['id'], enabled='true'))['task']
+        await GroupConfig.all().delete()
+        result = await deliver_broadcast(task['id'])
+        self.assertFalse(result['ok'])
+        self.assertIn('尚未配置机器人与目标群', (await EventLog.get()).result)
+
+    async def test_delivery_deletes_only_previous_message_for_same_task(self):
+        await GroupConfig.create(id=1, bot_token='secret', chat_id='-1001', revision='test')
+        content = (await self.content())['content']
+        task = (await self.task(content['id'], enabled='true', delete_previous=True))['task']
+        with patch('services.broadcast_delivery.execution_allowed', new_callable=AsyncMock, return_value=True), \
+                patch('services.broadcast_delivery.call_api', return_value={'message_id': 101}):
+            await deliver_broadcast(task['id'])
+        with patch('services.broadcast_delivery.execution_allowed', new_callable=AsyncMock, return_value=True), \
+                patch('services.broadcast_delivery.call_api', side_effect=[True, {'message_id': 102}]) as sender:
+            result = await deliver_broadcast(task['id'])
+        self.assertTrue(result['ok'])
+        self.assertEqual(sender.call_args_list[0].args[1], 'deleteMessage')
+        self.assertEqual(sender.call_args_list[0].kwargs['message_id'], 101)
+        self.assertEqual(sender.call_args_list[1].args[1], 'sendMessage')
+        previous, current = await BroadcastAttempt.all().order_by('started_at', 'id')
+        self.assertTrue(previous.message_deleted)
+        self.assertFalse(current.message_deleted)
+        self.assertEqual(current.message_id, 102)
+        self.assertIn('已删除上一条广播 发送成功', (await EventLog.all().order_by('-id').first()).result)
+
+    async def test_delivery_continues_when_previous_message_cannot_be_deleted(self):
+        await GroupConfig.create(id=1, bot_token='secret', chat_id='-1001', revision='test')
+        content = (await self.content())['content']
+        task = (await self.task(content['id'], enabled='true', delete_previous=True))['task']
+        with patch('services.broadcast_delivery.execution_allowed', new_callable=AsyncMock, return_value=True), \
+                patch('services.broadcast_delivery.call_api', return_value={'message_id': 101}):
+            await deliver_broadcast(task['id'])
+        with patch('services.broadcast_delivery.execution_allowed', new_callable=AsyncMock, return_value=True), \
+                patch('services.broadcast_delivery.call_api', side_effect=[TelegramError('删除失败'), {'message_id': 102}]) as sender:
+            result = await deliver_broadcast(task['id'])
+        self.assertTrue(result['ok'])
+        self.assertEqual(sender.call_count, 2)
+        previous, current = await BroadcastAttempt.all().order_by('started_at', 'id')
+        self.assertFalse(previous.message_deleted)
+        self.assertEqual(current.message_id, 102)
+        self.assertIn('删除上一条广播失败', (await EventLog.all().order_by('-id').first()).result)
+
+    async def test_previous_message_is_not_deleted_after_target_group_changes(self):
+        await GroupConfig.create(id=1, bot_token='old-secret', chat_id='-1001', revision='old')
+        content = (await self.content())['content']
+        task = (await self.task(content['id'], enabled='true', delete_previous=True))['task']
+        with patch('services.broadcast_delivery.execution_allowed', new_callable=AsyncMock, return_value=True), \
+                patch('services.broadcast_delivery.call_api', return_value={'message_id': 101}):
+            await deliver_broadcast(task['id'])
+        await GroupConfig.filter(id=1).update(bot_token='new-secret', chat_id='-2002', revision='new')
+        with patch('services.broadcast_delivery.execution_allowed', new_callable=AsyncMock, return_value=True), \
+                patch('services.broadcast_delivery.call_api', return_value={'message_id': 201}) as sender:
+            result = await deliver_broadcast(task['id'])
+        self.assertTrue(result['ok'])
+        sender.assert_called_once()
+        self.assertEqual(sender.call_args.args[1], 'sendMessage')
+        self.assertFalse((await BroadcastAttempt.get(message_id=101)).message_deleted)
+
+    async def test_broadcast_message_cleanup_migration_is_idempotent(self):
+        await migrate_broadcast_message_cleanup()
+        await migrate_broadcast_message_cleanup()
+        columns = Tortoise.get_connection('default')
+        task_columns = await columns.execute_query_dict('PRAGMA table_info("broadcast_tasks")')
+        attempt_columns = await columns.execute_query_dict('PRAGMA table_info("broadcast_attempts")')
+        self.assertIn('delete_previous', {column['name'] for column in task_columns})
+        self.assertIn('message_id', {column['name'] for column in attempt_columns})
+        self.assertIn('message_deleted', {column['name'] for column in attempt_columns})
 
     async def test_toggle_preserves_rules_and_edit_preserves_status(self):
         content = (await self.content())['content']

@@ -14,7 +14,6 @@ from services.activity import record_activity
 from services.antispam import classify_message
 from services.join_runtime import bot_key, nickname, api
 from services.permissions import RESTRICTED_PERMISSIONS
-from services.network import get_proxy_url
 from services.runtime_health import execution_allowed
 from services.telegram import TelegramError
 
@@ -118,7 +117,7 @@ async def process_job(job_id):
         return
     if state == 'queued':
         job.rule_key = rule_key(keywords, ai)
-        result = await run_in_threadpool(classify_message, job.content, keywords, ai, await get_proxy_url(),
+        result = await run_in_threadpool(classify_message, job.content, keywords, ai,
             whitelist.entries if whitelist else [], str(job.user['id']), job.user.get('username', ''))
         if result['is_spam'] is not True:
             if result['is_spam'] is None:

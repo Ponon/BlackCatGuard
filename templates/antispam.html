@@ -60,7 +60,7 @@
                                     </label>
                                 </div>
                             </div>
-                            <div class="spam-field"><label class="spam-label" for="ai-base-url">接口基础地址</label><input class="spam-input" id="ai-base-url" name="base_url" value="{{ base_url }}" maxlength="2048" placeholder="填写服务商或本地模型基础地址" autocomplete="off"><p class="spam-help">填写服务商提供的基础地址（通常以 /v1 结尾），程序会追加 /chat/completions。</p></div>
+                            <div class="spam-field"><label class="spam-label" for="ai-base-url">接口基础地址</label><input class="spam-input" id="ai-base-url" name="base_url" value="{{ base_url }}" maxlength="2048" placeholder="填写服务商或本地模型基础地址" autocomplete="off"><p class="spam-help">填写服务商提供的基础地址（通常以 /v1 结尾），程序会追加 /chat/completions；AI 接口固定直连，不使用系统代理。</p></div>
                             <div class="spam-field"><label class="spam-label" for="ai-model">模型名称</label><input class="spam-input" id="ai-model" name="model" value="{{ model }}" maxlength="128" placeholder="填写接口支持的模型名称" autocomplete="off"></div>
                             <div class="spam-field">
                                 <label class="spam-label" for="ai-api-key">API Key</label>

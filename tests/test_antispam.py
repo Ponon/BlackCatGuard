@@ -34,17 +34,18 @@ class DecisionTests(unittest.TestCase):
             self.assertIsNone(classify_message('聊天', keyword, ai)['is_spam'])
         self.assertIsNone(classify_message('聊天', None, None)['is_spam'])
 
-    def test_ai_request_proxy_and_strict_boolean(self):
+    def test_ai_request_is_direct_and_strict_boolean(self):
         for value, valid in [(True, True), (False, True), ('false', False)]:
             response = MagicMock()
             response.__enter__.return_value.read.return_value = json.dumps({'choices': [{'message': {'content': json.dumps({'is_spam': value, 'reason': '测试'})}}]}).encode()
             with patch('services.antispam.open_request', return_value=response) as opener:
                 if valid:
-                    self.assertIs(classify_ai('消息', 'https://example.test/v1', 'model', 'secret', 'http://localhost:7897')['is_spam'], value)
+                    self.assertIs(classify_ai('消息', 'https://example.test/v1', 'model', 'secret')['is_spam'], value)
                 else:
                     with self.assertRaises(AIError):
-                        classify_ai('消息', 'https://example.test/v1', 'model', 'secret', 'http://localhost:7897')
-                self.assertEqual(opener.call_args.kwargs['proxy_url'], 'http://localhost:7897')
+                        classify_ai('消息', 'https://example.test/v1', 'model', 'secret')
+                self.assertIs(opener.call_args.kwargs['direct'], True)
+                self.assertNotIn('proxy_url', opener.call_args.kwargs)
                 request = opener.call_args.args[0]
                 self.assertEqual(request.full_url, 'https://example.test/v1/chat/completions')
                 self.assertEqual(request.headers['Authorization'], 'Bearer secret')

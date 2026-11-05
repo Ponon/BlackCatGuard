@@ -24,6 +24,8 @@ async def init_db():
 
     # 仅创建不存在的表，不清空已有数据。
     await Tortoise.generate_schemas(safe=True)
+    # 原始补列必须先于旧广播迁移，旧数据库的迁移代码才能写入新增字段默认值。
+    await migrate_broadcast_message_cleanup()
     await migrate_verification_settings()
     await migrate_welcome_settings()
     await migrate_event_logs()
@@ -195,3 +197,22 @@ async def migrate_log_retention():
     columns = await connection.execute_query_dict('PRAGMA table_info("system_settings")')
     if 'log_retention_days' not in {column['name'] for column in columns}:
         await connection.execute_query('ALTER TABLE system_settings ADD COLUMN log_retention_days INT NOT NULL DEFAULT 30')
+
+
+async def migrate_broadcast_message_cleanup():
+    """为已有广播任务和发送记录补自动删除状态。"""
+    connection = Tortoise.get_connection('default')
+    for table, additions in {
+        'broadcast_tasks': {'delete_previous': 'BOOLEAN NOT NULL DEFAULT 0'},
+        'broadcast_attempts': {
+            'bot_key': "VARCHAR(64) NOT NULL DEFAULT ''",
+            'chat_id': "VARCHAR(32) NOT NULL DEFAULT ''",
+            'message_id': 'BIGINT NULL',
+            'message_deleted': 'BOOLEAN NOT NULL DEFAULT 0',
+        },
+    }.items():
+        columns = await connection.execute_query_dict(f'PRAGMA table_info("{table}")')
+        names = {column['name'] for column in columns}
+        for name, definition in additions.items():
+            if columns and name not in names:
+                await connection.execute_query(f'ALTER TABLE "{table}" ADD COLUMN "{name}" {definition}')

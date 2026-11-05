@@ -34,7 +34,7 @@ def parse_ai_content(content):
     return {'is_spam': result['is_spam'], 'reason': result['reason'][:500]}
 
 
-def classify_ai(text, base_url, model, api_key, proxy_url=''):
+def classify_ai(text, base_url, model, api_key):
     payload = {
         'model': model,
         'messages': [
@@ -53,7 +53,8 @@ def classify_ai(text, base_url, model, api_key, proxy_url=''):
     request = Request(base_url.rstrip('/') + '/chat/completions',
                       data=json.dumps(payload, ensure_ascii=False).encode(), headers=headers, method='POST')
     try:
-        with open_request(request, proxy_url=proxy_url, timeout=30) as response:
+        # AI 接口可能部署在局域网，固定直连，避免环境代理拦截或返回 503。
+        with open_request(request, direct=True, timeout=30) as response:
             raw = response.read(1024 * 1024 + 1)
         if len(raw) > 1024 * 1024:
             raise AIError('AI 返回内容过大。')
@@ -71,12 +72,12 @@ def classify_ai(text, base_url, model, api_key, proxy_url=''):
         message = messages.get(error.code, '服务暂时不可用 请稍后重试' if error.code >= 500 else '请求失败 请检查接口和模型配置')
         raise AIError(f'AI 接口返回 HTTP {error.code} {message}') from None
     except (URLError, ssl.SSLError, TimeoutError, OSError):
-        raise AIError('AI 连接失败，请检查网络、系统代理及证书配置。') from None
+        raise AIError('AI 连接失败，请检查网络、接口地址及证书配置。') from None
     except (ValueError, KeyError, IndexError, TypeError, AttributeError):
         raise AIError('AI 返回格式不正确，未获得有效判断。') from None
 
 
-def classify_message(text, keyword_config, ai_config, proxy_url='', whitelist=None, user_id='', username=''):
+def classify_message(text, keyword_config, ai_config, whitelist=None, user_id='', username=''):
     # 数字 ID 精确匹配，用户名忽略大小写；白名单命中后不调用 AI。
     identities = {str(user_id)} if user_id else set()
     if username:
@@ -94,7 +95,7 @@ def classify_message(text, keyword_config, ai_config, proxy_url='', whitelist=No
             return {'is_spam': True, 'checks': checks, 'message': f'关键词：命中[{word}]关键词，垃圾信息'}
     if ai_config and ai_config.enabled:
         try:
-            result = classify_ai(text, ai_config.base_url, ai_config.model, ai_config.api_key, proxy_url)
+            result = classify_ai(text, ai_config.base_url, ai_config.model, ai_config.api_key)
             checks.append({'source': 'AI', 'status': '垃圾' if result['is_spam'] else '正常', 'detail': result['reason']})
             return {'is_spam': result['is_spam'], 'checks': checks, 'message': ('AI：' + (' '.join(result['reason'].split()).rstrip('。，, ')[:300] or '判定为垃圾内容') + '，垃圾信息') if result['is_spam'] else '综合判定：正常消息'}
         except AIError as error:

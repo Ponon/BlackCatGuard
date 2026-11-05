@@ -59,6 +59,7 @@ def task_data(task):
         'id': task.id, 'content_id': task.content_id,
         'enabled': task.enabled, 'schedule_mode': task.schedule_mode,
         'interval_minutes': task.interval_minutes, 'times': task.times,
+        'delete_previous': task.delete_previous,
         'description': schedule_description(task.schedule_mode, task.interval_minutes, task.times),
     }
 
@@ -132,6 +133,7 @@ async def save_task(
     content_id: Annotated[int, Form()] = 0,
     schedule_mode: Annotated[str, Form()] = 'daily',
     interval_minutes: Annotated[str, Form()] = '60', times: Annotated[str, Form()] = '',
+    delete_previous: Annotated[bool, Form()] = False,
     csrf_token: Annotated[str, Form()] = '',
 ):
     await require_admin(request)
@@ -159,7 +161,7 @@ async def save_task(
         values = {
             'content_id': content.id,
             'schedule_mode': schedule_mode, 'interval_minutes': interval,
-            'times': selected_times,
+            'times': selected_times, 'delete_previous': delete_previous,
         }
         if task_id:
             task = await BroadcastTask.get_or_none(id=task_id)
